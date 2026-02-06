@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="p-4 text-center bg-gray-300">
-      © 2026 Training App
+    <footer className="w-full py-4 text-center bg-gray-100 text-gray-600 text-sm">
+      © 2026 Justina Training Platform
     </footer>
   );
 }
