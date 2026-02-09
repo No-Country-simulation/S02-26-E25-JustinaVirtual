@@ -8,9 +8,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Telemetria {
-    private Double x;
-    private Double y;
-    private Double z;
-    private Long timestamp;
-    private String idInstrumento;
+    
+    private Double eixoX;
+    private Double eixoY;
+    private Double eixoZ;    
+    private String tempo; 
+    
+    
 }
