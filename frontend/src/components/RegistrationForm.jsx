@@ -1,3 +1,4 @@
+// Teste de integração
 import { useState } from "react";
 
 export default function RegistrationForm() {
