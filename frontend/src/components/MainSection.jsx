@@ -1,7 +1,19 @@
 import { Link } from "react-router-dom";
 import RegistrationForm from "./RegistrationForm";
+import { useState, useEffect } from "react";
 
 export default function MainSection() {
+  // Criamos um estado para saber se o usuário está registrado
+  const [isRegistered, setIsRegistered] = useState(false);
+
+  // Verificão se já existe alguém no localStorage ao carregar a página
+  useEffect(() => {
+    const user = localStorage.getItem("justina_user");
+    if (user) {
+      setIsRegistered(true);
+    }
+  }, []);
+
   return (
     <section className="flex-1 px-6 py-16 bg-gray-100">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -11,7 +23,8 @@ export default function MainSection() {
           <h2 className="text-2xl font-semibold mb-6">
             User Registration
           </h2>
-          <RegistrationForm />
+          {/* Passando uma função para o formulário avisar quando terminar */}
+          <RegistrationForm onRegisterSuccess={() => setIsRegistered(true)} />
         </div>
 
         {/* Lado direito – CTA */}
@@ -25,12 +38,22 @@ export default function MainSection() {
             with real-time performance tracking.
           </p>
 
-          <Link
-            to="/simulator"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-md text-lg transition"
-          >
-            Go to Simulator
-          </Link>
+          {/* MÁGICA DA INTEGRAÇÃO: O botão muda de cor e comportamento se não estiver registrado */}
+          {isRegistered ? (
+            <Link
+              to="/simulator"
+              className="inline-block bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-md text-lg transition shadow-lg"
+            >
+              Start Simulator Now →
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="inline-block bg-gray-400 text-white px-8 py-4 rounded-md text-lg cursor-not-allowed"
+            >
+              Register to Unlock Simulator
+            </button>
+          )}
         </div>
 
       </div>
