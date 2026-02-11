@@ -26,11 +26,12 @@ export default function MainSection() {
           </p>
 
           <Link
-            to="/simulator"
+            to="/login"
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-md text-lg transition"
           >
             Go to Simulator
           </Link>
+
          <br/>
          <p className="text-gray-600 mb-8">
             Sessão de treinamento.

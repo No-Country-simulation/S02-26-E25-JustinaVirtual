@@ -1,11 +1,9 @@
-import RenalCanvas from "../canvas/RenalCanvas";
+import Simulator2D from "../simulator2d/Simulator2D";
 
 export default function Simulator() {
   return (
-    <div style={{ padding: 24, color: "#e5e7eb" }}>
-      <h1>Justina — Simulador Cirúrgico</h1>
-      <p>Interaja com o ambiente simulando o instrumento cirúrgico.</p>
-      <RenalCanvas />
+    <div style={{ height: "100vh" }}>
+      <Simulator2D />
     </div>
   );
 }
