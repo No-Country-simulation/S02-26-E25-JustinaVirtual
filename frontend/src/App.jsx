@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Simulator from "./pages/Simulator";
 import TrainingSessionPage from "./pages/TrainingSessionPage";
 import { TrainingSessionProvider } from "./contexts/TrainingSessionContext";
+import Library from "./pages/Library";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/simulator" element={<Simulator />} />
         <Route path="/trainingSession" element={<TrainingSessionPage />} />
+        <Route path="/library" element={<Library />} />
 
       </Routes>
         </TrainingSessionProvider>

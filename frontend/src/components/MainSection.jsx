@@ -31,36 +31,18 @@ export default function MainSection() {
 
               <div>
                  <br />
-                 <Card title="Treinamento">
-                       <p className="text-gray-600 mb-8">Sessão de treinamento.</p>
-                    <div className="space-y-5">
-                       <Input
-                          label="Nome"
-                          type="text"
-                          placeholder="Nome de usuario"
-                       />
-                       <Input
-                          label="Rol"
-                          type="Text"
-                          placeholder="Ex: Médico, Enfermeiro, Estudante"
-                       />
-
-                       <div className="flex gap-4 mt-6">
-                          <Button className="flex-1">Entrar</Button>
-                          <Button variant="outline" className="flex-1">
-                             Criar conta
-                          </Button>
                  <Link
                     to="/trainingSession"
                     className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-md text-lg transition">
                     Treinamento
                  </Link>
-                       </div>
-
-                       {/* {error && <Alert variant="danger">{error}</Alert>} */}
-                    </div>
-                 </Card>
-
+                 <br />
+                 <br />
+                 <Link
+                    to="/library"
+                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-md text-lg transition">
+                    Component Library
+                 </Link>
               </div>
            </div>
         </div>
