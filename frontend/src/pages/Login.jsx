@@ -1,8 +1,12 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -10,42 +14,47 @@ export default function Login() {
   function handleLogin(e) {
     e.preventDefault();
 
-    // 🔐 Aqui depois você conecta com backend
-    if (email && password) {
-      navigate("/simulator");
-    }
+    // 🔐 Simulação de login
+    const medicoFake = {
+      name: "Dr. Ayran Vieira",
+      crm: "CRM 123456",
+      specialty: "Cirurgia Geral",
+    };
+
+    login(medicoFake);
+    navigate("/dashboard");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          Login - Justina Simulator
+    <div className="min-h-screen flex items-center justify-center bg-muted">
+      <div className="bg-card p-10 rounded-lg shadow-md w-full max-w-md">
+        
+        <h2 className="text-2xl font-bold mb-6 text-center text-foreground">
+          Login
         </h2>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <input
+
+          <Input
+            label="Email"
             type="email"
-            placeholder="Email"
-            className="w-full border p-3 rounded"
+            placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <input
+          <Input
+            label="Password"
             type="password"
-            placeholder="Password"
-            className="w-full border p-3 rounded"
+            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded transition"
-          >
-            Enter Simulator
-          </button>
+          <Button type="submit" size="lg" className="w-full">
+            Entrar
+          </Button>
+
         </form>
       </div>
     </div>
