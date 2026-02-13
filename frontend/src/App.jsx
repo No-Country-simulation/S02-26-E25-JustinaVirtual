@@ -1,19 +1,20 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import TrainingSessionPage from "./pages/TrainingSessionPage";
 import Simulator from "./pages/Simulator";
+import Library from "./pages/Library";
+
+import { TrainingSessionProvider } from "./contexts/TrainingSessionContext";
+import PrivateRoute from "./components/PrivateRoute";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Raiz do site: O Cadastro do Médico */}
         <Route path="/" element={<Home />} />
-        
-        {/* Área Protegida: O Simulador Cirúrgico */}
         <Route path="/simulator" element={<Simulator />} />
-        
-        {/* Rota de escape: Se digitar qualquer coisa errada, volta pra Home */}
-        <Route path="*" element={<Home />} />
       </Routes>
     </BrowserRouter>
   );
