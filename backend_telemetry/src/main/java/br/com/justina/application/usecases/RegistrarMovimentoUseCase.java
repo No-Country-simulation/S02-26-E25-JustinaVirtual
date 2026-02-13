@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ProcessarTelemetriaUseCase {
+public class RegistrarMovimentoUseCase {
 
     private final ITelemetriaRepositoryPort repository;
     private final IAiClientPort aiClient;
