@@ -1,7 +1,9 @@
 package br.com.justina.application.usecases;
 
+import br.com.justina.application.dto.RegisterRequest;
 import br.com.justina.domain.model.Usuario;
 import br.com.justina.domain.repository.UsuarioRepository;
+import br.com.justina.infrastructure.exception.AuthenticationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,20 +19,30 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Usuario register(Usuario usuario) {
-        if (usuarioRepository.existsByEmail(usuario.getEmail())) {
-            throw new IllegalArgumentException("Email já cadastrado!");
+    public void register(RegisterRequest request) {
+
+        if (usuarioRepository.existsByEmail(request.email())) {
+            throw new AuthenticationException("Email ou senha inválidos");
+
         }
-        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
-        return usuarioRepository.save(usuario);
+
+        Usuario usuario = new Usuario();
+        usuario.setName(request.name());
+        usuario.setEmail(request.email());
+        usuario.setPassword(passwordEncoder.encode(request.password()));
+        usuario.setRole(request.role());
+
+        usuarioRepository.save(usuario);
     }
+
 
     public Usuario authenticate(String email, String rawPassword) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Email ou senha inválidos"));
 
         if (!passwordEncoder.matches(rawPassword, usuario.getPassword())) {
-            throw new IllegalArgumentException("Email ou senha inválidos");
+            throw new AuthenticationException("Email ou senha inválidos");
+
         }
 
         return usuario;
