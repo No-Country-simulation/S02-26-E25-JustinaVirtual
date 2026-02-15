@@ -2,39 +2,103 @@ import { useEffect, useState } from "react";
 import RenalCanvas from "../canvas/RenalCanvas";
 
 export default function Simulator() {
-  const [medico, setMedico] = useState("Cirurgião");
+  const [medico, setMedico] = useState("CIRURGIÃO");
+  const [segundos, setSegundos] = useState(0);
 
+  // 1. Busca o nome real do médico e garante CAIXA ALTA
   useEffect(() => {
-    // Buscamos os dados que você salvou lá no RegistrationForm
     const dadosSalvos = localStorage.getItem("justina_user");
     if (dadosSalvos) {
       const objetoMedico = JSON.parse(dadosSalvos);
-      setMedico(objetoMedico.name || "Cirurgião"); // Pega o nome do médico
+      // Se tiver nome, transforma em UPPERCASE, se não, vira CIRURGIÃO
+      setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
     }
   }, []);
 
+  // 2. Cronômetro de Sessão (Tempo Real)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSegundos((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer); // Limpa o timer ao fechar o componente
+  }, []);
+
+  // Função auxiliar para formatar 00:00
+  const formatarTempo = (s) => {
+    const min = Math.floor(s / 60).toString().padStart(2, '0');
+    const seg = (s % 60).toString().padStart(2, '0');
+    return `${min}:${seg}`;
+  };
+
   return (
-    <div className="p-6 bg-slate-900 min-h-screen text-gray-100">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="p-6 bg-slate-900 min-h-screen text-gray-100 font-sans">
+      
+      {/* HUD SUPERIOR - CABEÇALHO */}
+      <div className="mb-6 flex justify-between items-center bg-slate-800/50 p-5 rounded-2xl border border-slate-700 shadow-xl">
         <div>
-          <h1 className="text-3xl font-bold text-blue-400">Justina — Simulador Cirúrgico</h1>
-          <p className="text-gray-400">Operador: <span className="text-white font-semibold">{medico}</span></p>
+          <h1 className="text-2xl font-black text-blue-400 tracking-tighter uppercase italic">
+            Justina Virtual — HUD v1.0.3
+          </h1>
+          <p className="text-xs text-gray-400 uppercase tracking-[0.2em]">
+            Operador: <span className="text-white font-bold">{medico}</span>
+          </p>
         </div>
-        <div className="bg-blue-900/30 p-3 rounded border border-blue-500/50">
-          <p className="text-xs uppercase tracking-widest text-blue-300">Status do Sistema</p>
-          <p className="text-green-400 animate-pulse font-mono">● TELEMETRIA ATIVA</p>
+
+        <div className="flex gap-8 items-center">
+          {/* CRONÔMETRO CIRÚRGICO */}
+          <div className="text-right border-r border-slate-700 pr-8">
+            <p className="text-[10px] uppercase text-blue-300 tracking-widest mb-1">Tempo de Isquemia</p>
+            <p className="text-3xl font-mono font-black text-white">{formatarTempo(segundos)}</p>
+          </div>
+          
+          {/* STATUS DA TELEMETRIA */}
+          <div className="bg-blue-900/20 p-2 px-4 rounded-lg border border-blue-500/30">
+            <p className="text-[10px] uppercase tracking-widest text-blue-300 mb-1">Sistema</p>
+            <p className="text-green-400 animate-pulse font-mono text-sm font-bold flex items-center gap-2">
+              <span className="h-2 w-2 bg-green-500 rounded-full"></span>
+              TELEMETRIA ATIVA
+            </p>
+          </div>
         </div>
       </div>
       
-      
-      <div className="bg-black rounded-lg border-2 border-slate-700 shadow-2xl overflow-hidden">
-        {/* Aqui é onde a cirurgia acontece - Sua lógica de Canvas */}
+      {/* CONTAINER DO SIMULADOR (CANVAS) */}
+      <div className="bg-black rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden relative group">
         <RenalCanvas />
+        
+        {/* SCORE OVERLAY - TELEMETRIA EM TEMPO REAL */}
+        <div className="absolute top-6 right-6 bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-right shadow-2xl">
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">Precisão da Incisão</p>
+          <p className="text-4xl font-black text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+            573 <span className="text-xs text-emerald-600 font-normal">pts</span>
+          </p>
+        </div>
+
+        {/* MENSAGEM DE AJUDA NO HOVER */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600/90 text-white text-[10px] px-4 py-1 rounded-full font-bold uppercase tracking-widest">
+          Mouse para interagir com o parênquima renal
+        </div>
       </div>
       
-      <p className="mt-4 text-sm text-gray-500 italic">
-        * Use o mouse ou controlador para interagir com o ambiente renal simulado.
-      </p>
+      {/* BARRA DE STATUS INFERIOR */}
+      <div className="mt-6 flex justify-between items-center px-2">
+        <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">
+          Protocolo Estável // Telemetria FE-5 // DD-Ready
+        </p>
+        
+        <div className="flex gap-4">
+          <button className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black transition-all border border-slate-700 uppercase tracking-widest">
+            Pausar
+          </button>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="px-8 py-3 bg-red-950/30 hover:bg-red-600 border border-red-500/30 text-red-400 hover:text-white rounded-xl text-xs font-black transition-all shadow-lg uppercase tracking-widest"
+          >
+            Encerrar Sessão
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
