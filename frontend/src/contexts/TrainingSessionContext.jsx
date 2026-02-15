@@ -8,7 +8,6 @@ import ImagemRimPelveRenal from '../assets/ImagemRimPelveRenal.jpg';
 
 export default function TrainingSessionPage() {
   const video1 = "https://www.youtube.com/embed/fELn4Fe9Ccc";
-  const context = useTrainingSession();
 
   // LOG DE DIAGNÓSTICO
   console.log("Contexto atual:", context);
