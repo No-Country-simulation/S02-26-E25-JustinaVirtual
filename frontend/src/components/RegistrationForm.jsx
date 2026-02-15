@@ -15,7 +15,28 @@ export default function RegistrationForm({ onRegisterSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    let formattedValue = value;
+
+    // 1. Melhoria: Forçar Nome em CAIXA ALTA
+    if (name === "name") {
+      formattedValue = value.toUpperCase();
+    }
+
+    // 2. Melhoria: Formatação automática de WhatsApp (11) 99999-9999
+    if (name === "phone") {
+      const numbers = value.replace(/\D/g, ""); // Remove o que não é número
+      
+      if (numbers.length <= 11) {
+        formattedValue = numbers
+          .replace(/^(\d{2})(\d)/g, "($1) $2")
+          .replace(/(\d{5})(\d)/, "$1-$2");
+      } else {
+        formattedValue = formData.phone; // Bloqueia se passar de 11 dígitos
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: formattedValue }));
   };
 
   const handleSubmit = (e) => {
@@ -29,10 +50,10 @@ export default function RegistrationForm({ onRegisterSuccess }) {
         onRegisterSuccess();
       }
 
-      console.log("✅ Integração FE-5: Payload gerado.", formData);
+      console.log("✅ Integração FE-5: Payload gerado com máscaras.", formData);
       
       // 3. Feedback visual para o usuário
-      alert(`Acesso autorizado: Dr. ${formData.name}. Iniciando Protocolo...`);
+      alert(`Acesso autorizado: DR. ${formData.name}. Iniciando Protocolo...`);
       
       // 4. Vai direto para o simulador
       navigate("/simulator"); 
@@ -62,6 +83,7 @@ export default function RegistrationForm({ onRegisterSuccess }) {
             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">DNI / ID</label>
             <input 
               name="dni"
+              value={formData.dni}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
               placeholder="12345678" 
               onChange={handleChange}
@@ -73,6 +95,7 @@ export default function RegistrationForm({ onRegisterSuccess }) {
             <input 
               name="password"
               type="password"
+              value={formData.password}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
               placeholder="••••••" 
               onChange={handleChange}
@@ -82,11 +105,12 @@ export default function RegistrationForm({ onRegisterSuccess }) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome Completo</label>
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome Completo (CAIXA ALTA)</label>
           <input 
             name="name"
+            value={formData.name}
             className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-            placeholder="Dr. Nome Exemplo" 
+            placeholder="DR. NOME EXEMPLO" 
             onChange={handleChange}
             required
           />
@@ -98,6 +122,7 @@ export default function RegistrationForm({ onRegisterSuccess }) {
               <input 
                 name="email"
                 type="email"
+                value={formData.email}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
                 placeholder="med@hosp.com" 
                 onChange={handleChange}
@@ -109,8 +134,9 @@ export default function RegistrationForm({ onRegisterSuccess }) {
               <input 
                 name="phone"
                 type="tel"
+                value={formData.phone}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none text-sm" 
-                placeholder="(85) 9..." 
+                placeholder="(85) 99999-9999" 
                 onChange={handleChange}
                 required
               />
