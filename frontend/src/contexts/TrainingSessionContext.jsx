@@ -103,3 +103,5 @@ export default function TrainingSessionPage() {
     </div>
   );
 }
+
+export const useTrainingSession = () => useContext(TrainingSessionContext);
