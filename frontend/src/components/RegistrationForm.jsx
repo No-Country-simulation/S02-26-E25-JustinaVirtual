@@ -7,7 +7,7 @@ export default function RegistrationForm() {
     dni: "",
     name: "",
     email: "",
-    phone: "", 
+    phone: "",
     password: "",
     role: "USER",
     comments: ""
@@ -24,7 +24,7 @@ export default function RegistrationForm() {
       localStorage.setItem("justina_user", JSON.stringify(formData));
       console.log("✅ Integração FE-5: Payload com Telefone/DD gerado.", formData);
       alert(`Acesso autorizado: Dr. ${formData.name}.`);
-      navigate("/simulator"); // É ISSO AQUI QUE FAZ AVANÇAR!
+      navigate("/simulator"); 
     } catch (error) {
       console.error("Erro no registro:", error);
     }
@@ -47,6 +47,7 @@ export default function RegistrationForm() {
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">DNI / ID</label>
@@ -82,6 +83,7 @@ export default function RegistrationForm() {
             />
           </div>
 
+          {/* E-mail e Telefone (DD) lado a lado para otimizar espaço */}
           <div className="grid grid-cols-5 gap-3">
              <div className="col-span-3 space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">E-mail Acadêmico</label>
