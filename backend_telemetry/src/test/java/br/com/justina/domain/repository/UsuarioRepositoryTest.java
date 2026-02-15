@@ -22,7 +22,7 @@ class UsuarioRepositoryTest {
     @Test
     @DisplayName("Deveria salvar um novo usuário e buscá-lo por e-mail no H2")
     void deveriaSalvarEBuscarUsuario() {
-        // 1. Arrange (Preparar os dados)
+        // 1. Preparar os dados
         Usuario novoUsuario = new Usuario(
                 "Dr. Gregory House",
                 "house@diagnostico.com",

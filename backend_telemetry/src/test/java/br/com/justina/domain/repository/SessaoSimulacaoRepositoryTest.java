@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest // Configura o ambiente leve de banco de dados para teste
+@DataJpaTest
 @ActiveProfiles("test")
 class SessaoSimulacaoRepositoryTest {
 
@@ -25,7 +25,7 @@ class SessaoSimulacaoRepositoryTest {
     @Test
     @DisplayName("Deve persistir uma sessão e validar os valores automáticos")
     void deveSalvarSessaoEValidarCampos() {
-        // 1. Criar um usuário (precisamos de um dono para a sessão)
+        // 1. Criar um usuário
         Usuario medico = new Usuario();
         medico.setName("Dr. Justina");
         medico.setEmail("justina@hospital.com");
@@ -42,9 +42,9 @@ class SessaoSimulacaoRepositoryTest {
         SessaoSimulacao salva = sessaoRepository.save(sessao);
 
         // 4. Verificar se funcionou
-        assertThat(salva.getId()).isNotNull(); // Gerou UUID?
-        assertThat(salva.getStatus()).isEqualTo(StatusSessao.EM_ANDAMENTO); // PrePersist funcionou?
-        assertThat(salva.getDataInicio()).isNotNull(); // Data de início foi setada?
-        assertThat(salva.getUsuario().getEmail()).isEqualTo("justina@hospital.com"); // Relacionamento OK?
+        assertThat(salva.getId()).isNotNull();
+        assertThat(salva.getStatus()).isEqualTo(StatusSessao.EM_ANDAMENTO);
+        assertThat(salva.getDataInicio()).isNotNull();
+        assertThat(salva.getUsuario().getEmail()).isEqualTo("justina@hospital.com");
     }
 }

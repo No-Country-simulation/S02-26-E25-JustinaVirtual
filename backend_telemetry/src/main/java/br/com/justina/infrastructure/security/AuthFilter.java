@@ -33,7 +33,9 @@ public class AuthFilter extends OncePerRequestFilter {
 
         if ("MEU_TOKEN_DE_TESTE".equals(token)) {
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    "UsuarioTeste", null, Collections.emptyList());
+                    "justina@teste.com",
+                    null,
+                    Collections.emptyList());
             SecurityContextHolder.getContext().setAuthentication(auth);
         } else {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
