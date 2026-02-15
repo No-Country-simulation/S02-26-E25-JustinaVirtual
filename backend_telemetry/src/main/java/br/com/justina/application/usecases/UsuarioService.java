@@ -20,10 +20,8 @@ public class UsuarioService {
 
     @Transactional
     public void register(RegisterRequest request) {
-
-        if (usuarioRepository.existsByEmail(request.email())) {
-            throw new AuthenticationException("Email ou senha inválidos");
-
+        if (usuarioRepository.findByEmail(request.email()).isPresent()) {
+            throw new RuntimeException("Este e-mail já está cadastrado.");
         }
 
         Usuario usuario = new Usuario();
@@ -35,16 +33,10 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
     }
 
-
     public Usuario authenticate(String email, String rawPassword) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        return usuarioRepository.findByEmail(email)
+                .filter(user -> passwordEncoder.matches(rawPassword, user.getPassword()))
                 .orElseThrow(() -> new AuthenticationException("Email ou senha inválidos"));
-
-        if (!passwordEncoder.matches(rawPassword, usuario.getPassword())) {
-            throw new AuthenticationException("Email ou senha inválidos");
-        }
-
-        return usuario;
     }
 
     public Optional<Usuario> findByEmail(String email) {
