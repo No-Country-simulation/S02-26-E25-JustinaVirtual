@@ -38,11 +38,10 @@ public class UsuarioService {
 
     public Usuario authenticate(String email, String rawPassword) {
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Email ou senha inválidos"));
+                .orElseThrow(() -> new AuthenticationException("Email ou senha inválidos"));
 
         if (!passwordEncoder.matches(rawPassword, usuario.getPassword())) {
             throw new AuthenticationException("Email ou senha inválidos");
-
         }
 
         return usuario;

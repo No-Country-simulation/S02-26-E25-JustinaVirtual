@@ -1,5 +1,6 @@
 package br.com.justina.infrastructure.controller;
 
+import br.com.justina.application.dto.LoginResponse;
 import br.com.justina.application.dto.RegisterRequest;
 import br.com.justina.application.usecases.UsuarioService;
 import br.com.justina.domain.model.Usuario;
@@ -27,8 +28,12 @@ public class UsuarioController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody @Valid LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
         Usuario usuario = usuarioService.authenticate(request.email(), request.password());
-        return ResponseEntity.ok("Login realizado com sucesso para: " + usuario.getName());
+        return ResponseEntity.ok(new LoginResponse(
+                usuario.getName(),
+                usuario.getEmail(),
+                usuario.getRole().name()
+        ));
     }
 }
