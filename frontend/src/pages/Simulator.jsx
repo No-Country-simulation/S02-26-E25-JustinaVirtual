@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import RenalCanvas from "../canvas/RenalCanvas";
-=======
-import Simulator2D from "../simulator2d/Simulator2D";
->>>>>>> origin/dev
 
 export default function Simulator() {
   const [medico, setMedico] = useState("Cirurgião");
@@ -13,12 +9,11 @@ export default function Simulator() {
     const dadosSalvos = localStorage.getItem("justina_user");
     if (dadosSalvos) {
       const objetoMedico = JSON.parse(dadosSalvos);
-      setMedico(objetoMedico.name); // Pega o nome do médico
+      setMedico(objetoMedico.name || "Cirurgião"); // Pega o nome do médico
     }
   }, []);
 
   return (
-<<<<<<< HEAD
     <div className="p-6 bg-slate-900 min-h-screen text-gray-100">
       <div className="mb-6 flex justify-between items-center">
         <div>
@@ -31,18 +26,15 @@ export default function Simulator() {
         </div>
       </div>
       
+      
       <div className="bg-black rounded-lg border-2 border-slate-700 shadow-2xl overflow-hidden">
-        {/* Aqui é onde a cirurgia acontece */}
+        {/* Aqui é onde a cirurgia acontece - Sua lógica de Canvas */}
         <RenalCanvas />
       </div>
       
       <p className="mt-4 text-sm text-gray-500 italic">
         * Use o mouse ou controlador para interagir com o ambiente renal simulado.
       </p>
-=======
-    <div style={{ height: "100vh" }}>
-      <Simulator2D />
->>>>>>> origin/dev
     </div>
   );
 }
