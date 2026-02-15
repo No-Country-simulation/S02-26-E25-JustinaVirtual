@@ -13,7 +13,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@ActiveProfiles("dev") // Isso força o uso do H2 que configuramos
+@ActiveProfiles("dev")
 class UsuarioRepositoryTest {
 
     @Autowired
@@ -30,10 +30,8 @@ class UsuarioRepositoryTest {
                 Role.ADMIN
         );
 
-        // 2. Act (Executar a ação)
         Usuario salvo = repository.save(novoUsuario);
 
-        // 3. Assert (Verificar se deu certo)
         assertNotNull(salvo.getId());
 
         Optional<Usuario> buscado = repository.findByEmail("house@diagnostico.com");
