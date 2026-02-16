@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import RegistrationForm from "./RegistrationForm";
 import { useState, useEffect } from "react";
+import Button from "./ui/Button";
 
 export default function MainSection() {
   // Estado para saber se o usuário está registrado
@@ -59,7 +60,18 @@ export default function MainSection() {
             >
               Register to Unlock Simulator
             </button>
+            
           )}
+          <div>
+            <br/> 
+          <label>teporary button to login</label>
+          <br/>   
+          <Link to="/login">
+            <Button>
+              Start Simulation Temporary
+            </Button>
+          </Link>
+          </div>
         </div>
 
       </div>

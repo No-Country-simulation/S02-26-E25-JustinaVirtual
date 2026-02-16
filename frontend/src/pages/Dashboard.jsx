@@ -69,7 +69,7 @@ export default function Dashboard() {
             <Button
               size="lg"
               className="w-full"
-              onClick={() => navigate("/treinamento")}
+              onClick={() => navigate("/training")}
             >
               Start Training
             </Button>
