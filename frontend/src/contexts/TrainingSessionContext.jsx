@@ -1,4 +1,3 @@
-// src/contexts/TrainingSessionContext.jsx
 import { createContext, useContext, useState } from 'react';
 
 const TrainingSessionContext = createContext(null);
@@ -24,7 +23,6 @@ export function TrainingSessionProvider({ children }) {
 
   const recordAnswer = (answerRecord) => {
     if (!session) return;
-
     setSession(prev => ({
       ...prev,
       answers: [...prev.answers, answerRecord],
@@ -39,13 +37,13 @@ export function TrainingSessionProvider({ children }) {
 
   const finishSession = () => {
     if (!session) return;
-    setSession(prev => ({
-      ...prev,
+    const finalSession = {
+      ...session,
       endTime: new Date(),
-      totalTimeMs: new Date() - prev.startTime,
-    }));
-    // Here you would usually send to backend
-    console.log("Sessão finalizada:", session);
+      totalTimeMs: new Date() - session.startTime,
+    };
+    console.log("Sessão finalizada:", finalSession);
+    setSession(null); // Opcional: limpa a sessão após finalizar
   };
 
   return (
@@ -64,4 +62,11 @@ export function TrainingSessionProvider({ children }) {
   );
 }
 
-export const useTrainingSession = () => useContext(TrainingSessionContext);
+// DECLARAÇÃO ÚNICA DO HOOK NO FINAL DO ARQUIVO
+export const useTrainingSession = () => {
+  const context = useContext(TrainingSessionContext);
+  if (!context) {
+    throw new Error('useTrainingSession deve ser usado dentro de um TrainingSessionProvider');
+  }
+  return context;
+};
