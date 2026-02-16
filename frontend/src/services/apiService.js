@@ -1,58 +1,55 @@
-const API_BASE_URL = "http://localhost:8081/api";
+const API_BASE_URL = "http://localhost:8081";
+const TEST_TOKEN = "MEU_TOKEN_DE_TESTE";
 
 export const apiService = {
-  // 1. Envio de Telemetria
-  sendTelemetry: async (payload) => {
-    if (!payload || !payload.telemetry || payload.telemetry.length === 0) {
-      console.warn("⚠️ Tentativa de envio sem dados.");
-      return { success: false, message: "Nenhum movimento capturado." };
-    }
-
+  // 1. Iniciar Sessão (Conforme especificado pela Stephanny)
+  startSession: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/simulacao/finalizar`, {
+      const response = await fetch(`${API_BASE_URL}/api/sessoes/iniciar`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(payload),
+          "Authorization": `Bearer ${TEST_TOKEN}` // Dica da Stephanny!
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erro no servidor: ${response.status}`);
+      if (response.status === 409) {
+        throw new Error("⚠️ Você já possui uma sessão em andamento no servidor.");
       }
-      return await response.json();
-    } catch (error) {
-      if (error.message.includes("Failed to fetch")) {
-        console.error("🚨 Backend desligado na porta 8081!");
-      }
-      throw error; 
-    }
-  },
 
-  // 2. Busca Histórico Individual (Dev 3)
-  getHistory: async (dni) => {
-    if (!dni) throw new Error("DNI é obrigatório.");
-    try {
-      const response = await fetch(`${API_BASE_URL}/v1/medicos/${dni}/historico`);
-      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      if (!response.ok) throw new Error(`Erro ao iniciar: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error(`❌ Erro DNI ${dni}:`, error.message);
+      console.error("🚨 Falha na conexão com o Backend:", error.message);
       throw error;
     }
   },
 
-  // 3. Relatório para a Diretoria
-  getDirectorReport: async () => {
+  // 2. Finalizar Sessão (PUT http://localhost:8081/api/sessoes/{id}/finalizar)
+  finishSession: async (sessionId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/diretoria/relatorio-geral`);
-      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      const response = await fetch(`${API_BASE_URL}/api/sessoes/${sessionId}/finalizar`, {
+        method: "PUT",
+        headers: { 
+          "Authorization": `Bearer ${TEST_TOKEN}`
+        }
+      });
+
+      if (!response.ok) throw new Error("Erro ao finalizar sessão no servidor.");
       return await response.json();
     } catch (error) {
-      console.error("❌ Erro Relatório Diretoria:", error.message);
+      console.error("❌ Erro ao encerrar:", error.message);
       throw error;
     }
+  },
+
+  // 3. Login (Para autenticação futura)
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    return await response.json();
   }
 };
