@@ -7,16 +7,14 @@ export function TrainingSessionProvider({ children }) {
   const [currentStep, setCurrentStep] = useState(0);
 
   const startSession = (moduleId, traineeId) => {
+    // Por enquanto local, mas preparado para o POST /api/sessoes/iniciar
     setSession({
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      id: Date.now().toString(),
       traineeId,
       moduleId,
       startTime: new Date(),
-      stepsCompleted: 0,
       answers: [],
-      totalScore: 0,
-      totalTimeMs: 0,
-      majorErrors: 0,
+      totalScore: 0
     });
     setCurrentStep(0);
   };
@@ -27,46 +25,25 @@ export function TrainingSessionProvider({ children }) {
       ...prev,
       answers: [...prev.answers, answerRecord],
       totalScore: prev.totalScore + (answerRecord.isCorrect ? 1 : 0),
-      majorErrors: prev.majorErrors + (answerRecord.isCorrect ? 0 : 1),
     }));
   };
 
-  const finishStep = () => {
-    setCurrentStep(prev => prev + 1);
-  };
+  const finishStep = () => setCurrentStep(prev => prev + 1);
 
   const finishSession = () => {
-    if (!session) return;
-    const finalSession = {
-      ...session,
-      endTime: new Date(),
-      totalTimeMs: new Date() - session.startTime,
-    };
-    console.log("Sessão finalizada:", finalSession);
-    setSession(null); // Opcional: limpa a sessão após finalizar
+    console.log("Finalizando sessão no backend...");
+    setSession(null);
   };
 
   return (
-    <TrainingSessionContext.Provider 
-      value={{ 
-        session, 
-        startSession, 
-        recordAnswer, 
-        finishStep, 
-        finishSession, 
-        currentStep 
-      }}
-    >
+    <TrainingSessionContext.Provider value={{ session, startSession, recordAnswer, finishStep, finishSession, currentStep }}>
       {children}
     </TrainingSessionContext.Provider>
   );
 }
 
-// DECLARAÇÃO ÚNICA DO HOOK NO FINAL DO ARQUIVO
 export const useTrainingSession = () => {
   const context = useContext(TrainingSessionContext);
-  if (!context) {
-    throw new Error('useTrainingSession deve ser usado dentro de um TrainingSessionProvider');
-  }
+  if (!context) throw new Error('useTrainingSession deve ser usado dentro de um Provider');
   return context;
 };
