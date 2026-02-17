@@ -1,8 +1,10 @@
 package br.com.justina.infrastructure.controllers;
 
+import br.com.justina.application.dto.FinalizarSessaoRequest;
 import br.com.justina.application.dto.SessaoResponse;
 import br.com.justina.application.usecases.AbrirSessaoUseCase;
 import br.com.justina.application.usecases.FinalizarSessaoUseCase;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +14,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/sessoes")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class SessaoController {
 
     private final AbrirSessaoUseCase abrirSessaoUseCase;
+    private final FinalizarSessaoUseCase finalizarSessaoUseCase;
 
     @PostMapping("/iniciar")
     public ResponseEntity<SessaoResponse> iniciarSessao() {
@@ -22,11 +26,11 @@ public class SessaoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    private final FinalizarSessaoUseCase finalizarSessaoUseCase;
-
-    @PutMapping("/{id}/finalizar")
-    public ResponseEntity<SessaoResponse> finalizarSessao(@PathVariable UUID id) {
-        SessaoResponse response = finalizarSessaoUseCase.executar(id);
-        return ResponseEntity.ok(response);
+    @PatchMapping("/{id}/finalizar")
+    public ResponseEntity<SessaoResponse> finalizar(
+            @PathVariable UUID id,
+            @RequestBody @Valid FinalizarSessaoRequest request
+    ) {
+        return ResponseEntity.ok(finalizarSessaoUseCase.executar(id, request));
     }
 }

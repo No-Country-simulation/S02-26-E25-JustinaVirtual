@@ -1,5 +1,6 @@
 package br.com.justina.application.usecases;
 
+import br.com.justina.application.dto.FinalizarSessaoRequest;
 import br.com.justina.application.dto.SessaoResponse;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
@@ -21,7 +22,7 @@ public class FinalizarSessaoUseCase {
     private final SessaoSimulacaoRepository sessaoRepository;
 
     @Transactional
-    public SessaoResponse executar(UUID sessaoId) {
+    public SessaoResponse executar(UUID sessaoId, FinalizarSessaoRequest request) {
         // 1. Busca a sessão
         SessaoSimulacao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada com o ID: " + sessaoId));
@@ -35,7 +36,11 @@ public class FinalizarSessaoUseCase {
         sessao.setDataFim(LocalDateTime.now());
         sessao.setStatus(StatusSessao.FINALIZADA);
 
-        // 4. Calcula o tempo total em segundos - Lógica simples por enquanto
+        // Persistindo métricas consolidadas vindas do request
+        sessao.setTotalErros(request.totalErros());
+        sessao.setPontuacaoGeral(request.pontuacaoGeral());
+
+        // 4. Calcula o tempo total em segundos
         long segundos = Duration.between(sessao.getDataInicio(), sessao.getDataFim()).getSeconds();
         sessao.setTempoTotalSegundos(segundos);
 
