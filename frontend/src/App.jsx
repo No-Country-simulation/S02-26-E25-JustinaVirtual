@@ -8,22 +8,24 @@ import Dashboard from "./pages/Dashboard";
 import TrainingSessionPage from "./pages/TrainingSessionPage";
 import Simulator from "./pages/Simulator";
 import Library from "./pages/Library";
+import PreTestSurvey from "./pages/PreTestSurvey"; 
 
 export default function App() {
   return (
     <TrainingSessionProvider>
       <BrowserRouter>
         <Routes>
-          {/* Fluxo Principal */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* ✅ PASSO 2:  Rota do questionário  */}
+          <Route path="/survey" element={<PreTestSurvey />} /> 
+          
           <Route path="/training" element={<TrainingSessionPage />} />
           <Route path="/simulator" element={<Simulator />} />
           <Route path="/library" element={<Library />} />
 
-          {/* Rota de Segurança */}
-          {/* Se o médico se perder, ele volta para a Home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
