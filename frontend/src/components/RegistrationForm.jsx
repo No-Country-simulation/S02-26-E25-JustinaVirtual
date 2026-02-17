@@ -92,3 +92,5 @@ export default function RegistrationForm({ onRegisterSuccess }) {
     </div>
   );
 }
+
+// Teste de auditoria
