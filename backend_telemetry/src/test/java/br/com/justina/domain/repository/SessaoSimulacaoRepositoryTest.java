@@ -25,7 +25,7 @@ class SessaoSimulacaoRepositoryTest {
     @Test
     @DisplayName("Deve persistir uma sessão e validar os valores automáticos")
     void deveSalvarSessaoEValidarCampos() {
-        // 1. Criar um usuário
+        // 1. Criar um usuário teste
         Usuario medico = new Usuario();
         medico.setName("Dr. Justina");
         medico.setEmail("justina@hospital.com");
