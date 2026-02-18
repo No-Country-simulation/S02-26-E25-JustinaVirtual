@@ -33,4 +33,8 @@ public class TelemetriaRepositoryAdapter implements ITelemetriaRepositoryPort {
     public SessaoSimulacao salvarSessao(SessaoSimulacao sessao) {
         return sessao;
     }
+    @Override
+    public List<Telemetria> buscarPorSessao(UUID sessaoId) {
+        return jpaRepository.findBySessaoIdOrderByTimestampAsc(sessaoId);
+    }
 }

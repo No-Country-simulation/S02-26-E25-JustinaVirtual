@@ -5,10 +5,7 @@ import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -36,5 +33,9 @@ public class InMemoryTelemetriaRepositoryAdapter implements ITelemetriaRepositor
         sessoesDB.put(sessao.getId(), sessao);
         System.out.println("--- SESSÃO SALVA --- ID: " + sessao.getId() + " Status: " + sessao.getStatus());
         return sessao;
+    }
+    @Override
+    public List<Telemetria> buscarPorSessao(UUID sessaoId) {
+        return new ArrayList<>();
     }
 }
