@@ -19,7 +19,7 @@ public class SessaoSimulacao {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", nullable = false)
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
     private Usuario usuario;
