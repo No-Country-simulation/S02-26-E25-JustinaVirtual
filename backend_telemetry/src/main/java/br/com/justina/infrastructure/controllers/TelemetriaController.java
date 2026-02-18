@@ -7,6 +7,7 @@ import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
 import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import br.com.justina.infrastructure.dto.TelemetriaDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -28,7 +29,7 @@ public class TelemetriaController {
     private final TelemetryEngine telemetryEngine;
 
     @PostMapping("/movimentos")
-    public ResponseEntity<Void> receberMovimentos(@RequestBody List<TelemetriaDTO> dtos) {
+    public ResponseEntity<Void> receberMovimentos(@RequestBody @Valid List<TelemetriaDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
