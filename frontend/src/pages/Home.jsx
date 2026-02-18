@@ -7,12 +7,9 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-slate-950">
       <Navbar />
       
-      {/* Centralizando a mensagem */}
-      <div className="flex justify-center mt-10 -mb-10">
-        <p className="text-[10px] font-mono text-blue-500 animate-pulse tracking-[0.5em]">
-           ⚠️ APENAS UM E-LEARNING // PROTOCOLO EXPERIMENTAL
-        </p>
-      </div>
+      {/* O BLOCO DE MENSAGEM FOI REMOVIDO DAQUI 
+          PARA MANTER A TELA DE CADASTRO LIMPA.
+      */}
 
       <MainSection />
       <Footer />
