@@ -4,6 +4,7 @@ import br.com.justina.application.ports.output.IAiClientPort;
 import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
+import br.com.justina.domain.model.Telemetria;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -46,6 +48,10 @@ public class FinalizarCirurgiaUseCase {
             sessao.setTempoTotalSegundos(segundos);
         }
 
+        List<Telemetria> pontos = repository.buscarPorSessao(sessaoId);
+        double distancia = calcularDistancia3D(pontos);
+        log.info("Distância total calculada para a sessão {}: {} unidades", sessaoId, distancia);
+
         // 4. Salvar (Persistência)
         SessaoSimulacao sessaoSalva = repository.salvarSessao(sessao);
         log.info("Sessão {} finalizada com sucesso. Tempo total: {}s", sessaoId, sessao.getTempoTotalSegundos());
@@ -59,5 +65,19 @@ public class FinalizarCirurgiaUseCase {
         }
 
         return sessaoSalva;
+    }
+    private double calcularDistancia3D(List<Telemetria> pontos) {
+        double total = 0;
+        for (int i = 0; i < pontos.size() - 1; i++) {
+            Telemetria p1 = pontos.get(i);
+            Telemetria p2 = pontos.get(i + 1);
+
+            total += Math.sqrt(
+                    Math.pow(p2.getEixoX() - p1.getEixoX(), 2) +
+                            Math.pow(p2.getEixoY() - p1.getEixoY(), 2) +
+                            Math.pow(p2.getEixoZ() - p1.getEixoZ(), 2)
+            );
+        }
+        return total;
     }
 }
