@@ -1,16 +1,6 @@
 package br.com.justina.domain.model;
 
 import jakarta.persistence.*;
-<<<<<<< HEAD
-import lombok.Data;
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-@Data
-@Entity
-@Table(name = "tb_sessoes_simulacao")
-public class SessaoSimulacao {
-=======
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -25,18 +15,11 @@ import java.util.UUID;
 @Builder
 public class SessaoSimulacao {
 
->>>>>>> origin/dev
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-<<<<<<< HEAD
-    private LocalDateTime dataInicio;
-    
-    // Resultados da IA
-    private String statusIa;   
-    private Double precisaoIa;
-=======
+    // --- (Vínculo com Usuário) ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
@@ -51,25 +34,32 @@ public class SessaoSimulacao {
     @Column(nullable = false)
     private StatusSessao status;
 
+    // --- (Métricas Gerais) ---
     private Double pontuacaoGeral;
     private Integer totalErros;
     private Long tempoTotalSegundos;
 
+    // --- (Resultados da IA) ---
+    private String statusIa;   
+    private Double precisaoIa;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    // --- LÓGICA AUTOMÁTICA (Ciclo de Vida) ---
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.dataInicio == null) {
             this.dataInicio = LocalDateTime.now();
         }
-        // Toda sessão nova nasce em andamento
+        
         if (this.status == null) {
             this.status = StatusSessao.EM_ANDAMENTO;
         }
     }
 
+    
     public boolean isFinalizada() {
         return StatusSessao.FINALIZADA.equals(this.status);
     }
@@ -82,5 +72,4 @@ public class SessaoSimulacao {
         if (totalErros == null || totalErros == 0) return 100.0;
         return Math.max(0, 100.0 - (totalErros * 5));
     }
->>>>>>> origin/dev
 }

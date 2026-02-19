@@ -12,25 +12,31 @@ import java.util.UUID;
 @Entity
 @Table(name = "tb_telemetrias")
 public class Telemetria {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // --- Coordenadas (Mantido) ---
+    // --- Coordenadas ---
     private Double eixoX;
     private Double eixoY;
     private Double eixoZ;
 
-    // --- Novidades da Equipe (Adicionado) ---
+    
     private Double rotacao; 
     private String eventId;
 
-    // --- Tempo (Adotamos a versão da equipe: LocalDateTime) ---
+    // --- Tempo ---
     private LocalDateTime timestamp;
 
-    // --- Relacionamento (Mantendo JPA) ---
-    // Foi sugerida 'String sessionId', mas no objeto real é necessário para as chaves estrangeiras.
+    // --- Relacionamento JPA (O que vale para o Banco) ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sessao_id")
     private SessaoSimulacao sessao;
+
+    
+    // Adicionei o sessionId para o TelemetryEngine funcionar, 
+    // mas marquei como @Transient para não salvar no banco (o banco usa o 'sessao' acima)
+    @Transient
+    private String sessionId;
 }
