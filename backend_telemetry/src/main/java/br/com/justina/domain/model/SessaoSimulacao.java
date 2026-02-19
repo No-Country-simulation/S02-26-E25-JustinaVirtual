@@ -19,6 +19,7 @@ public class SessaoSimulacao {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // --- (Vínculo com Usuário) ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
@@ -33,25 +34,32 @@ public class SessaoSimulacao {
     @Column(nullable = false)
     private StatusSessao status;
 
+    // --- (Métricas Gerais) ---
     private Double pontuacaoGeral;
     private Integer totalErros;
     private Long tempoTotalSegundos;
 
+    // --- (Resultados da IA) ---
+    private String statusIa;   
+    private Double precisaoIa;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    // --- LÓGICA AUTOMÁTICA (Ciclo de Vida) ---
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.dataInicio == null) {
             this.dataInicio = LocalDateTime.now();
         }
-        // Toda sessão nova nasce em andamento
+        
         if (this.status == null) {
             this.status = StatusSessao.EM_ANDAMENTO;
         }
     }
 
+    
     public boolean isFinalizada() {
         return StatusSessao.FINALIZADA.equals(this.status);
     }
