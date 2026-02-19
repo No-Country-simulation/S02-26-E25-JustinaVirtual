@@ -4,25 +4,15 @@ import { useTrainingSession } from "../contexts/TrainingSessionContext";
 
 export default function RenalCanvas() {
   const canvasRef = useRef(null);
-  const { session } = useTrainingSession(); // Pegamos a sessão real iniciada no Java
+  const { session } = useTrainingSession();
   const [path, setPath] = useState([]);
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // --- LÓGICA DE PERSISTÊNCIA (Resiliência Hospitalar) ---
-  useEffect(() => {
-    const saved = localStorage.getItem("justina_draft_session");
-    if (saved) {
-      const { path: sPath } = JSON.parse(saved);
-      if (window.confirm("Simulação anterior interrompida. Deseja recuperar os dados telemétricos?")) {
-        setPath(sPath);
-      } else {
-        localStorage.removeItem("justina_draft_session");
-      }
-    }
-  }, []);
+  // Configuração do Alvo (Rim)
+  const KIDNEY_TARGET = { x: 650, y: 250, radiusX: 80, radiusY: 120 };
 
-  // 1. Renderização do Ambiente Cirúrgico (Canvas API)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -32,125 +22,156 @@ export default function RenalCanvas() {
 
     const drawScene = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Desenho do Rim (Alvo Cirúrgico)
-      ctx.fillStyle = "#7c3aed";
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = "#7c3aed";
+
+      // 1. DESENHO DO RIM (Efeito 3D com Gradiente)
+      const gradient = ctx.createRadialGradient(
+        KIDNEY_TARGET.x - 20, KIDNEY_TARGET.y - 40, 10,
+        KIDNEY_TARGET.x, KIDNEY_TARGET.y, 120
+      );
+      gradient.addColorStop(0, "#ff4d4d"); // Brilho interno
+      gradient.addColorStop(1, "#660000"); // Sombra externa
+
+      ctx.fillStyle = gradient;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = "rgba(153, 0, 0, 0.5)";
       ctx.beginPath();
-      ctx.ellipse(650, 250, 80, 120, 0, 0, Math.PI * 2);
+      ctx.ellipse(KIDNEY_TARGET.x, KIDNEY_TARGET.y, KIDNEY_TARGET.radiusX, KIDNEY_TARGET.radiusY, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Desenho da Linha de Telemetria (Rastro do Mouse)
+      // 2. BRAÇO ROBÓTICO VIRTUAL (Linha de conexão)
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#22c55e";
-      ctx.lineWidth = 2;
-      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(100, 116, 139, 0.5)"; // Cor metálica
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      path.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      });
+      ctx.moveTo(0, 500); // Base do braço no canto inferior
+      ctx.lineTo(mousePos.x, mousePos.y);
       ctx.stroke();
-    };
-    drawScene();
-  }, [path]);
+      
+      // Ponteira do instrumento
+      ctx.fillStyle = "#cbd5e1";
+      ctx.beginPath();
+      ctx.arc(mousePos.x, mousePos.y, 5, 0, Math.PI * 2);
+      ctx.fill();
 
-  // 2. Captura de Movimento com Throttling
+      // 3. RASTRO DE TELEMETRIA (Dinâmico: Verde/Vermelho)
+      path.forEach((p, i) => {
+        if (i === 0) return;
+        const prev = path[i - 1];
+        
+        // Lógica de Colisão simples (dentro ou fora da elipse)
+        const dx = (p.x - KIDNEY_TARGET.x) / KIDNEY_TARGET.radiusX;
+        const dy = (p.y - KIDNEY_TARGET.y) / KIDNEY_TARGET.radiusY;
+        const isInside = (dx * dx + dy * dy) <= 1;
+
+        ctx.strokeStyle = isInside ? "#22c55e" : "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(prev.x, prev.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      });
+    };
+
+    drawScene();
+  }, [path, mousePos]);
+
   const handleMove = (e) => {
     if (isFinished) return;
-
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
+    
+    setMousePos({ x, y });
 
     const lastPoint = path[path.length - 1];
-    // Só grava se houver movimento significativo (> 2px)
     if (!lastPoint || Math.abs(x - lastPoint.x) > 2 || Math.abs(y - lastPoint.y) > 2) {
       const newPoint = { x, y, t: Date.now() };
       const newPath = [...path, newPoint];
       setPath(newPath);
-      
-      localStorage.setItem("justina_draft_session", JSON.stringify({
-        sessionId: session?.id,
-        path: newPath
-      }));
+      localStorage.setItem("justina_draft_session", JSON.stringify({ path: newPath }));
     }
   };
 
-  // 3. Finalização Real com Payload para o Backend
   const handleFinish = async () => {
     if (path.length === 0) return;
-    
     setIsFinished(true);
     setIsSending(true);
     
+    // Simula o cálculo de precisão para o vídeo
+    const pointsInside = path.filter(p => {
+        const dx = (p.x - KIDNEY_TARGET.x) / KIDNEY_TARGET.radiusX;
+        const dy = (p.y - KIDNEY_TARGET.y) / KIDNEY_TARGET.radiusY;
+        return (dx * dx + dy * dy) <= 1;
+    }).length;
+
+    const precision = ((pointsInside / path.length) * 100).toFixed(1);
+
     const payload = {
-      sessionId: session?.id || "OFFLINE_SESSION",
-      dni: session?.traineeId || "000",
-      pointsCount: path.length,
-      telemetry: path 
+      sessionId: session?.id || "LOCAL_TEST",
+      telemetry: path,
+      metrics: { precision }
     };
 
     try {
-      // Enviando para o apiService !
-      await apiService.sendTelemetry(payload); 
+      await apiService.sendTelemetry(payload);
       localStorage.removeItem("justina_draft_session");
     } catch (error) {
-      console.error("Erro na telemetria:", error);
-      alert("Falha ao transmitir dados. A sessão foi salva localmente.");
+      console.error(error);
     } finally {
       setIsSending(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 p-8 bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 max-w-fit mx-auto">
-      {/* HUD de Telemetria Interno */}
-      <div className="w-full flex justify-between items-center px-4 py-3 bg-slate-800 rounded-t-xl border-b border-slate-700">
+    <div className="flex flex-col items-center gap-6 p-8 bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 max-w-fit mx-auto font-sans">
+      <div className="w-full flex justify-between items-center px-4 py-3 bg-slate-800/50 rounded-t-xl border-b border-slate-700">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 bg-red-500 animate-pulse rounded-full shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
-          <span className="text-slate-300 text-xs font-mono uppercase tracking-widest font-bold">
-            Live Telemetry: {isSending ? "Transmitting..." : "Active"}
+          <div className="w-3 h-3 bg-emerald-500 animate-pulse rounded-full"></div>
+          <span className="text-slate-300 text-[10px] font-mono uppercase tracking-[0.2em] font-bold">
+            Simulador Justina // Telemetria Ativa
           </span>
-        </div>
-        <div className="text-blue-400 text-xs font-mono">
-          SESSION_ID: {session?.id || "LOCAL_MODE"}
         </div>
       </div>
 
-      <div className="relative border-4 border-slate-700 rounded-lg overflow-hidden bg-black">
+      <div className="relative border-2 border-slate-700 rounded-xl overflow-hidden bg-slate-950 shadow-inner">
         <canvas 
           ref={canvasRef} 
           onMouseMove={handleMove} 
-          className="cursor-crosshair block" 
+          className="cursor-none block" 
         />
         
         {isFinished && (
-          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-white">
-             <h2 className="text-2xl font-black text-blue-500 mb-4">SESSÃO FINALIZADA</h2>
-             <p className="text-slate-400 font-mono">Pontos capturados: {path.length}</p>
-             <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-blue-600 rounded-full text-sm font-bold">Reiniciar</button>
+          <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-lg flex flex-col items-center justify-center text-center">
+            <h2 className="text-4xl font-black text-blue-500 italic tracking-tighter mb-2">SESSÃO FINALIZADA</h2>
+            <div className="h-1 w-20 bg-blue-500 mb-6"></div>
+            <p className="text-slate-400 font-mono text-sm uppercase tracking-widest">Relatório enviado para o sistema</p>
+            <button onClick={() => window.location.reload()} className="mt-8 px-10 py-3 bg-slate-800 hover:bg-blue-600 text-white rounded-full text-xs font-black uppercase transition-all">Reiniciar Protocolo</button>
           </div>
         )}
       </div>
 
-      <div className="w-full flex justify-between items-center">
-        <div className="flex flex-col">
-          <span className="text-slate-500 text-[10px] uppercase font-black">Data Points</span>
-          <span className="text-emerald-400 font-mono text-3xl">{path.length}</span>
+      <div className="w-full flex justify-between items-end bg-slate-800/20 p-4 rounded-2xl">
+        <div className="flex gap-10">
+            <div className="flex flex-col">
+              <span className="text-slate-500 text-[9px] uppercase font-black tracking-tighter">Captura de Pontos</span>
+              <span className="text-blue-400 font-mono text-4xl font-black">{path.length}</span>
+            </div>
+            <div className="flex flex-col border-l border-slate-700 pl-10">
+              <span className="text-slate-500 text-[9px] uppercase font-black tracking-tighter">Status do Instrumento</span>
+              <span className="text-emerald-500 font-mono text-sm mt-2 font-bold uppercase">Ready // DD-01</span>
+            </div>
         </div>
         
         <button
           onClick={handleFinish}
           disabled={isFinished || path.length === 0}
-          className={`px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+          className={`px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-tighter transition-all ${
             isFinished || path.length === 0 
-            ? "bg-slate-700 text-slate-500 cursor-not-allowed" 
-            : "bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20"
+            ? "bg-slate-800 text-slate-600" 
+            : "bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white shadow-[0_10px_30px_rgba(220,38,38,0.3)]"
           }`}
         >
-          {isSending ? "Enviando..." : "Encerrar e Enviar Telemetria"}
+          {isSending ? "Transmitindo Dados..." : "Finalizar Procedimento"}
         </button>
       </div>
     </div>
