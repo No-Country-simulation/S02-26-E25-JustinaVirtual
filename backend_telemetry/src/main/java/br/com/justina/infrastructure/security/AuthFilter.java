@@ -28,6 +28,12 @@ public class AuthFilter extends OncePerRequestFilter {
             response.getWriter().write("{\"error\": \"Token ausente\"}");
             return;
         }
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Token ausente\"}");
+            return;
+        }
 
         String token = authHeader.substring(7);
 
@@ -49,7 +55,11 @@ public class AuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.startsWith("/auth/") || path.startsWith("/h2-console");
+        String path = request.getServletPath();
+        return path.startsWith("/auth/")
+                || path.startsWith("/h2-console")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.equals("/swagger-ui.html");
     }
 }

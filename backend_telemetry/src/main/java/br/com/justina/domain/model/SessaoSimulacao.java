@@ -19,8 +19,7 @@ public class SessaoSimulacao {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // --- (Vínculo com Usuário) ---
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", nullable = false)
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
     private Usuario usuario;
@@ -40,7 +39,7 @@ public class SessaoSimulacao {
     private Long tempoTotalSegundos;
 
     // --- (Resultados da IA) ---
-    private String statusIa;   
+    private String statusIa;
     private Double precisaoIa;
 
     @Column(updatable = false)
@@ -53,13 +52,12 @@ public class SessaoSimulacao {
         if (this.dataInicio == null) {
             this.dataInicio = LocalDateTime.now();
         }
-        
+
         if (this.status == null) {
             this.status = StatusSessao.EM_ANDAMENTO;
         }
     }
 
-    
     public boolean isFinalizada() {
         return StatusSessao.FINALIZADA.equals(this.status);
     }

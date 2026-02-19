@@ -6,37 +6,30 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 @Entity
 @Table(name = "tb_telemetrias")
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Telemetria {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // --- Coordenadas ---
     private Double eixoX;
     private Double eixoY;
     private Double eixoZ;
-
-    
-    private Double rotacao; 
+    private Double rotacao;
     private String eventId;
-
-    // --- Tempo ---
     private LocalDateTime timestamp;
 
-    // --- Relacionamento JPA (O que vale para o Banco) ---
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sessao_id")
+    // Relacionamento com a Sessão (Chave Estrangeira no Banco)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sessao_id", nullable = false)
     private SessaoSimulacao sessao;
 
-    
-    // Adicionei o sessionId para o TelemetryEngine funcionar, 
-    // mas marquei como @Transient para não salvar no banco (o banco usa o 'sessao' acima)
+    // Campo para o Engine da IA, não vira coluna no banco
     @Transient
     private String sessionId;
 }

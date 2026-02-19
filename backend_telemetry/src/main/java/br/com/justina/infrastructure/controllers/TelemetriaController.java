@@ -1,5 +1,6 @@
 package br.com.justina.infrastructure.controllers;
 
+import br.com.justina.application.usecases.ConsultarTelemetriaUseCase;
 import br.com.justina.application.services.TelemetryEngine;
 import br.com.justina.application.usecases.FinalizarCirurgiaUseCase;
 import br.com.justina.application.usecases.RegistrarMovimentoUseCase;
@@ -7,6 +8,8 @@ import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
 import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import br.com.justina.infrastructure.dto.TelemetriaDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -26,9 +30,10 @@ public class TelemetriaController {
     private final RegistrarMovimentoUseCase registrarMovimentoUseCase;
     private final FinalizarCirurgiaUseCase finalizarCirurgiaUseCase;
     private final TelemetryEngine telemetryEngine;
+    private final ConsultarTelemetriaUseCase consultarTelemetriaUseCase;
 
     @PostMapping("/movimentos")
-    public ResponseEntity<Void> receberMovimentos(@RequestBody List<TelemetriaDTO> dtos) {
+    public ResponseEntity<Void> receberMovimentos(@RequestBody @Valid List<TelemetriaDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -63,5 +68,12 @@ public class TelemetriaController {
 
         SessaoSimulacao sessao = finalizarCirurgiaUseCase.executar(dto.getSessaoId());
         return ResponseEntity.ok(sessao);
+    }
+
+    @Operation(summary = "Busca telemetria de uma sessão", description = "Retorna todos os pontos de movimento ordenados para construção de gráficos.")
+    @GetMapping("/movimentos/{sessaoId}")
+    public ResponseEntity<List<Telemetria>> obterTelemetria(@PathVariable UUID sessaoId) {
+        List<Telemetria> dados = consultarTelemetriaUseCase.executar(sessaoId);
+        return ResponseEntity.ok(dados);
     }
 }

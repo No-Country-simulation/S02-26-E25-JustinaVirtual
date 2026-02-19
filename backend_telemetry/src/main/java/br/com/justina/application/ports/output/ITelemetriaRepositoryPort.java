@@ -11,6 +11,8 @@ public interface ITelemetriaRepositoryPort {
     // Telemetria
     void salvarTudo(List<Telemetria> movimentos);
 
+    List<Telemetria> buscarPorSessao(UUID sessaoId);
+
     // Sessão
     Optional<SessaoSimulacao> buscarSessaoPorId(UUID id);
     SessaoSimulacao salvarSessao(SessaoSimulacao sessao);
