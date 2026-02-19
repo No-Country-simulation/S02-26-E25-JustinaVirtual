@@ -1,15 +1,14 @@
 package br.com.justina.domain.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "tb_telemetria")
+@Table(name = "tb_telemetrias")
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class Telemetria {
@@ -17,15 +16,20 @@ public class Telemetria {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
     private Double eixoX;
     private Double eixoY;
     private Double eixoZ;
-    private Double rotacao; // Adicionado conforme backlog
-    private String eventId; // Adicionado conforme backlog
-    private LocalDateTime timestamp; // Alterado para LocalDateTime para facilitar operações de tempo
-    private String sessionId; // Necessário para throttling por sessão
+    private Double rotacao;
+    private String eventId;
+    private LocalDateTime timestamp;
 
-    @ManyToOne
-    @JoinColumn(name = "sessao_id")
+    // Relacionamento com a Sessão (Chave Estrangeira no Banco)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sessao_id", nullable = false)
     private SessaoSimulacao sessao;
+
+    // Campo para o Engine da IA, não vira coluna no banco
+    @Transient
+    private String sessionId;
 }

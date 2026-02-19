@@ -6,6 +6,7 @@ import br.com.justina.domain.model.Telemetria;
 import br.com.justina.domain.repository.SessaoSimulacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-@Primary
+@Profile("dev")
 @RequiredArgsConstructor
 public class TelemetriaRepositoryAdapter implements ITelemetriaRepositoryPort {
 
