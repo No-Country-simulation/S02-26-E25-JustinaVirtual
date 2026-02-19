@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.UUID;
 
 @Slf4j
+@RequestMapping
 @RestController
-@RequestMapping("/api")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class TelemetriaController {
