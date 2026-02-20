@@ -1,3 +1,38 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================= */
+/* Global base styles – light & dark mode        */
+/* ============================================= */
+
+:root {
+  --color-background: theme('colors.gray.50');
+  --color-foreground: theme('colors.gray.900');
+}
+
+.dark {
+  --color-background: theme('colors.gray.950');
+  --color-foreground: theme('colors.gray.100');
+}
+
+/* Apply to body/html */
+html, body {
+  @apply min-h-screen;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* Optional: smooth transition when theme changes */
+html {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Prevent scrollbars from looking weird in dark mode */
+html {
+  scrollbar-color: theme('colors.gray.700') theme('colors.gray.900');
+}
+
+.dark html {
+  scrollbar-color: theme('colors.gray.600') theme('colors.gray.950');
+}
