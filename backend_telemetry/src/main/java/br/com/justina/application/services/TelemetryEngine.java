@@ -2,6 +2,7 @@ package br.com.justina.application.services;
 
 import br.com.justina.domain.model.Telemetria;
 import br.com.justina.infrastructure.dto.TelemetriaDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class TelemetryEngine {
 
@@ -29,7 +31,7 @@ public class TelemetryEngine {
 
         // 1. Throttling
         if (isThrottled(dto.getSessionId())) {
-            // Logar que foi throttled (WARN) - Task #35
+            log.warn("Evento Throttled (Descartado) - Session: {}", dto.getSessionId());
             return null;
         }
 
@@ -73,7 +75,7 @@ public class TelemetryEngine {
                 telemetria.setTimestamp(LocalDateTime.now());
             }
         } catch (Exception e) {
-            // Log de erro de parse
+            log.error("Erro no parse do timestamp: {} - Usando now()", e.getMessage());
             telemetria.setTimestamp(LocalDateTime.now());
         }
 
