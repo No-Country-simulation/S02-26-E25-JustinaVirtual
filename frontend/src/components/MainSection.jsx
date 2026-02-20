@@ -62,16 +62,6 @@ export default function MainSection() {
             </button>
             
           )}
-          <div>
-            <br/> 
-          <label>teporary button to login</label>
-          <br/>   
-          <Link to="/login">
-            <Button>
-              Start Simulation Temporary
-            </Button>
-          </Link>
-          </div>
         </div>
 
       </div>
