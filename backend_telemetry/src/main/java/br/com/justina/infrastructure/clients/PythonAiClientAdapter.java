@@ -16,7 +16,6 @@ public class PythonAiClientAdapter implements IAiClientPort {
 
     private final RestClient restClient;
 
-    // Injeta a URL do serviço Python (definir no application.properties)
     public PythonAiClientAdapter(@Value("${app.ai-service.url:http://localhost:5000}") String aiServiceUrl) {
         this.restClient = RestClient.builder()
                 .baseUrl(aiServiceUrl)
@@ -25,37 +24,26 @@ public class PythonAiClientAdapter implements IAiClientPort {
 
     @Override
     public FeedbackIA analisarMovimentos(List<Telemetria> movimentos) {
-        // Log para debug
-        System.out.println("Enviando " + movimentos.size() + " pontos de telemetria para o serviço Python...");
-
-        // Faz o POST para o serviço Python (ex: endpoint /analisar)
-        try {
-            return restClient.post()
-                    .uri("/analisar")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(movimentos)
-                    .retrieve()
-                    .body(FeedbackIA.class);
-        } catch (Exception e) {
-            System.err.println("Erro ao chamar serviço Python: " + e.getMessage());
-            // Retorna um fallback para não quebrar o fluxo síncrono por enquanto
-            return new FeedbackIA(); 
-        }
-    }
+        // Envia os dados para o Python e recebe o feedback imediato
+        return restClient.post()
+                .uri("/analisar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(movimentos)
+                .retrieve()
+                .body(FeedbackIA.class);
+    } 
+    // ^--- O erro provavelmente estava aqui (faltava fechar essa chave)
 
     @Override
     public void solicitarRelatorioFinal(UUID sessaoId) {
-        System.out.println("Trigger Assíncrono para IA -> Gerar Relatório Sessão: " + sessaoId);
+        // Simulação da chamada assíncrona para o relatório final
+        System.out.println("IA: Solicitando relatório final para sessão " + sessaoId);
         
-        // Chamada assíncrona (fire-and-forget ou fila)
-        // Por enquanto, faremos uma chamada REST simples sem esperar resposta complexa
-        try {
-            restClient.post()
-                    .uri("/relatorio/" + sessaoId)
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (Exception e) {
-            System.err.println("Falha ao notificar IA sobre fim de sessão (esperado se serviço offline): " + e.getMessage());
-        }
+        /* Futuramente, descomentaremos quando o Python tiver essa rota:
+        restClient.post()
+                .uri("/relatorio/" + sessaoId)
+                .retrieve()
+                .toBodilessEntity();
+        */
     }
 }

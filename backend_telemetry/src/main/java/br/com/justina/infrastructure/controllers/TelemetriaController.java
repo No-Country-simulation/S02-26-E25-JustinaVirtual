@@ -1,79 +1,24 @@
 package br.com.justina.infrastructure.controllers;
 
-import br.com.justina.application.usecases.ConsultarTelemetriaUseCase;
-import br.com.justina.application.services.TelemetryEngine;
-import br.com.justina.application.usecases.FinalizarCirurgiaUseCase;
+import br.com.justina.application.dto.AnaliseRequest;
 import br.com.justina.application.usecases.RegistrarMovimentoUseCase;
-import br.com.justina.domain.model.SessaoSimulacao;
-import br.com.justina.domain.model.Telemetria;
-import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
-import br.com.justina.infrastructure.dto.TelemetriaDTO;
-import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import br.com.justina.domain.model.FeedbackIA;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-@Slf4j
-@RequestMapping
 @RestController
+@RequestMapping("/api/telemetria")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class TelemetriaController {
 
-    private final RegistrarMovimentoUseCase registrarMovimentoUseCase;
-    private final FinalizarCirurgiaUseCase finalizarCirurgiaUseCase;
-    private final TelemetryEngine telemetryEngine;
-    private final ConsultarTelemetriaUseCase consultarTelemetriaUseCase;
+    private final RegistrarMovimentoUseCase useCase;
 
-    @PostMapping("/movimentos")
-    public ResponseEntity<Void> receberMovimentos(@RequestBody @Valid List<TelemetriaDTO> dtos) {
-        if (dtos == null || dtos.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        List<Telemetria> movimentosValidos = new ArrayList<>();
-
-        for (TelemetriaDTO dto : dtos) {
-            // Processa via Engine (Normalização + Throttling)
-            Telemetria telemetria = telemetryEngine.process(dto);
-            
-            // Se não foi throttled (retornou objeto), adiciona na lista para salvar
-            if (telemetria != null) {
-                movimentosValidos.add(telemetria);
-            }
-        }
-
-        if (!movimentosValidos.isEmpty()) {
-            // Envia apenas os válidos para o UseCase (Persistência + IA realtime se houver)
-            registrarMovimentoUseCase.executar(movimentosValidos);
-        } else {
-            log.warn("Todos os movimentos do batch foram descartados/throttled ou inválidos.");
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PostMapping("/finalizar")
-    public ResponseEntity<SessaoSimulacao> finalizarCirurgia(@RequestBody FinalizarCirurgiaDTO dto) {
-        if (dto == null || dto.getSessaoId() == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        SessaoSimulacao sessao = finalizarCirurgiaUseCase.executar(dto.getSessaoId());
-        return ResponseEntity.ok(sessao);
-    }
-
-    @Operation(summary = "Busca telemetria de uma sessão", description = "Retorna todos os pontos de movimento ordenados para construção de gráficos.")
-    @GetMapping("/movimentos/{sessaoId}")
-    public ResponseEntity<List<Telemetria>> obterTelemetria(@PathVariable UUID sessaoId) {
-        List<Telemetria> dados = consultarTelemetriaUseCase.executar(sessaoId);
-        return ResponseEntity.ok(dados);
+    @PostMapping("/analisar")
+    public ResponseEntity<FeedbackIA> receberMovimentos(@RequestBody AnaliseRequest request) {
+        // Passamos o ID e a lista para o UseCase
+        FeedbackIA feedback = useCase.executar(request.getUsuarioId(), request.getMovimentos());
+        return ResponseEntity.ok(feedback);
     }
 }

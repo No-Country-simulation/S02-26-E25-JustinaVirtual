@@ -3,15 +3,13 @@ package br.com.justina.application.usecases;
 import br.com.justina.application.ports.output.IAiClientPort;
 import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
 import br.com.justina.domain.model.FeedbackIA;
-import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrarMovimentoUseCase {
@@ -19,22 +17,15 @@ public class RegistrarMovimentoUseCase {
     private final ITelemetriaRepositoryPort repository;
     private final IAiClientPort aiClient;
 
-    public FeedbackIA executar(List<Telemetria> movimentos) {
-
+    // Atualização da assinatura do método para receber o ID
+    public FeedbackIA executar(UUID usuarioId, List<Telemetria> movimentos) {
+        
+        // 1. Manda para a IA analisar
         FeedbackIA feedback = aiClient.analisarMovimentos(movimentos);
-        repository.salvarTudo(movimentos);
-
-        if (feedback != null && "ERRO".equalsIgnoreCase(feedback.getStatus())) {
-            SessaoSimulacao sessao = movimentos.get(0).getSessao();
-
-            if (sessao != null) {
-                int erros = (sessao.getTotalErros() != null) ? sessao.getTotalErros() : 0;
-                sessao.setTotalErros(erros + 1);
-
-                repository.salvarSessao(sessao);
-                log.info("Feedback IA processado: Erro registrado via status da IA para a sessão {}", sessao.getId());
-            }
-        }
+        
+        // 2. Salva no banco passando o ID do usuário dono da sessão
+        repository.salvarTudo(usuarioId, movimentos);
+        
         return feedback;
     }
 }
