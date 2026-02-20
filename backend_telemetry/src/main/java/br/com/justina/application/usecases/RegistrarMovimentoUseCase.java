@@ -20,11 +20,13 @@ public class RegistrarMovimentoUseCase {
     private final IAiClientPort aiClient;
 
     public FeedbackIA executar(List<Telemetria> movimentos) {
+        log.info("Persistindo {} movimentos e solicitando análise IA", movimentos.size());
 
         FeedbackIA feedback = aiClient.analisarMovimentos(movimentos);
         repository.salvarTudo(movimentos);
 
         if (feedback != null && "ERRO".equalsIgnoreCase(feedback.getStatus())) {
+            log.warn("Feedback IA indica ERRO no movimento");
             SessaoSimulacao sessao = movimentos.get(0).getSessao();
 
             if (sessao != null) {

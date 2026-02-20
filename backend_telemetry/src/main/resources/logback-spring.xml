@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    
+    <!-- Propriedade para nome da aplicação -->
+    <springProperty scope="context" name="appName" source="spring.application.name"/>
+
+    <!-- Appender para Console (JSON para facilitar ingestão em ELK/CloudWatch) -->
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="ch.qos.logback.contrib.json.classic.JsonLayout">
+                <jsonFormatter class="ch.qos.logback.contrib.jackson.JacksonJsonFormatter">
+                    <prettyPrint>false</prettyPrint>
+                </jsonFormatter>
+                <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSX</timestampFormat>
+                <appendLineSeparator>true</appendLineSeparator>
+            </layout>
+        </encoder>
+    </appender>
+
+    <!-- Appender Padrão (Texto) - Caso não queira JSON no console local -->
+    <appender name="CONSOLE_TEXT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [Sessao:%X{sessionId}] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Perfil DEV: Texto Simples -->
+    <springProfile name="dev,default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_TEXT" />
+        </root>
+    </springProfile>
+
+    <!-- Perfil PROD: JSON Estruturado -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <!-- Em prod, idealmente usaríamos JSON, mas como requer dependências extras (logback-json-classic),
+                 vamos manter TEXTO com MDC por enquanto para não quebrar o build sem adicionar libs. 
+                 Se quiser JSON real, precisamos adicionar logback-jackson no pom.xml -->
+            <appender-ref ref="CONSOLE_TEXT" />
+        </root>
+    </springProfile>
+
+</configuration>
