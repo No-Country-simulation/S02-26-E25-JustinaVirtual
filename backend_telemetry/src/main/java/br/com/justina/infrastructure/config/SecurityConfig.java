@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/**",
+                                "/telemetria/**",
                                 "/h2-console/**",
                                 "/error",
                                 "/v3/api-docs/**",
