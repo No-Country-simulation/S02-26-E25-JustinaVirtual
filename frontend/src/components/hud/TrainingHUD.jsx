@@ -39,6 +39,14 @@ export default function TrainingHUD() {
           </p>
         </div>
       </div>
+      
+      {/* Adicione isso abaixo do Score no TrainingHUD.jsx */}
+<div className="bg-black/60 p-3 border border-green-900/30 rounded backdrop-blur-sm mt-2">
+  <p className="text-green-400 text-[9px]">COORDENADAS CAPTURADAS</p>
+  <p className="text-2xl font-bold text-white">
+    {path.length} <span className="text-[10px] text-green-300">px</span>
+  </p>
+</div>
 
       {/* Rodapé do HUD */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-gray-600 font-mono">
