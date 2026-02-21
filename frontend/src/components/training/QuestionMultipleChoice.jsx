@@ -24,7 +24,7 @@ export default function QuestionMultipleChoice({ question, onAnswer }) {
   };
 
   return (
-    <div className="p-6 bg-gray-800 rounded-lg max-w-2xl mx-auto">
+    <div className="p-6 border border-border rounded-lg max-w-2xl mx-auto">
       <h3 className="text-xl font-semibold mb-6">{question.text}</h3>
 
       <div className="space-y-3">
@@ -38,10 +38,10 @@ export default function QuestionMultipleChoice({ question, onAnswer }) {
               ${selected === null 
                 ? 'hover:bg-gray-700 border-gray-600' 
                 : idx === question.correctIndex 
-                  ? 'bg-green-900 border-green-600' 
+                  ? 'bg-green-800 border-green-600' 
                   : selected === idx 
-                    ? 'bg-red-900 border-red-600' 
-                    : 'bg-gray-900 border-gray-700 opacity-60'}
+                    ? 'bg-red-800 border-red-600' 
+                    : 'bg-gray-600 border-gray-500 opacity-60'}
             `}
           >
             {opt}
