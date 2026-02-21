@@ -1,40 +1,57 @@
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from typing import List, Optional
-import random
+from typing import List
+import logging
 
-app = FastAPI()
+# Configuração de logging profissional
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("justina-ai")
 
+app = FastAPI(title="Justina AI Service", version="1.0.0")
 
-class TelemetriaDTO(BaseModel):
-    eixoX: float
-    eixoY: float
-    eixoZ: float
-    tempo: Optional[str] = None
+@app.post("/analisar")
+async def analisar_movimentos(request: Request):
+    try:
+        dados_lista = await request.json()
+        
+        # Log de recepção com contexto
+        count = len(dados_lista)
+        logger.info(f"Recebidos {count} registros para processamento.")
 
-class FeedbackIADTO(BaseModel):
-    status: str
-    mensagem: str
-    precisao: float
+        if count > 0:
+            # Extração segura dos dados
+            telemetria = dados_lista[0]
+            x = float(telemetria.get("eixoX", 0.0))
+            y = float(telemetria.get("eixoY", 0.0))
+            z = float(telemetria.get("eixoZ", 0.0))
+            session_id = telemetria.get("sessionId", "N/A")
 
-@app.post("/analisar", response_model=FeedbackIADTO)
-def analisar_movimentos(movimentos: List[TelemetriaDTO]):
-    print(f" PYTHON: Recebi {len(movimentos)} pontos de telemetria.")
-    
-    # --- AQUI ENTRARÁ O PYTORCH ---
-    # Por enquanto, simulamos a inteligência:
-    
-    score = random.uniform(0.7, 1.0) # Simula uma precisão aleatória
-    if score > 0.85:
-        status = "APROVADO"
-        msg = "Movimento suave e preciso."
-    else:
-        status = "ALERTA"
-        msg = "Detectamos tremor excessivo."
+            # Cálculo de score (Lógica de Negócio)
+            soma_eixos = abs(x) + abs(y) + abs(z)
+            # Normalização: estabilidade perfeita = 1.0
+            score = 1.0 - min(0.5, soma_eixos / 100.0) if soma_eixos > 0 else 1.0
+            
+            logger.info(f"Sessão: {session_id} | Score: {score:.4f} | Eixos: X={x}, Y={y}, Z={z}")
+        else:
+            score = 0.0
+            logger.warning("Lote de telemetria vazio recebido.")
 
-    return {
-        "status": status,
-        "mensagem": msg,
-        "precisao": round(score, 4)
-    }
+        # Determinação do status e recomendações profissionais
+        is_stable = score > 0.7
+        
+        return {
+            "status": "APROVADO" if is_stable else "ATENÇÃO",
+            "mensagem": "Processamento de telemetria realizado com sucesso",
+            "precisao": round(score, 4),
+            "recomendacao": "Condições de movimento dentro dos parâmetros normais" if is_stable 
+                            else "Alerta: Instabilidade detectada acima do limite de segurança"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no processamento: {str(e)}")
+        return {
+            "status": "ERRO",
+            "mensagem": f"Falha interna no motor de análise: {str(e)}",
+            "precisao": 0.0,
+            "recomendacao": "Reinicie a coleta de dados"
+        }
