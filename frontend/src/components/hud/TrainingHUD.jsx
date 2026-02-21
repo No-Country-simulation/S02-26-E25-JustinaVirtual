@@ -11,7 +11,7 @@ export default function TrainingHUD() {
   const wrongAnswers = session.answers.filter(a => !a.isCorrect).length;
 
   return (
-    <div className="absolute top-4 left-4 right-4 z-50 pointer-events-none">
+    <div className="absolute top-4 left-4 right-4 z-40 pointer-events-none">
       <div className="flex justify-between items-center bg-black/70 backdrop-blur-sm p-4 rounded-lg max-w-4xl mx-auto text-white">
         <div>
           <div className="text-sm opacity-80">Etapa {currentStep + 1}/3</div>
