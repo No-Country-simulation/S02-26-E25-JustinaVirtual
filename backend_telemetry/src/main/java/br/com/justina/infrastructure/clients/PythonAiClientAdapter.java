@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,23 +16,25 @@ import java.util.UUID;
 public class PythonAiClientAdapter implements IAiClientPort {
 
     private final RestClient restClient;
+    private final String aiServiceUrl;
 
     // Injeta a URL do serviço Python (definir no application.properties)
-    public PythonAiClientAdapter(@Value("${app.ai-service.url:http://localhost:5000}") String aiServiceUrl) {
-        this.restClient = RestClient.builder()
-                .baseUrl(aiServiceUrl)
-                .build();
+    public PythonAiClientAdapter(@Value("${app.ai-service.url:http://ai_service:8000}") String aiServiceUrl) {
+        this.restClient = RestClient.builder().build();
+        this.aiServiceUrl = aiServiceUrl.trim().replaceAll("/+$", "");
     }
 
     @Override
     public FeedbackIA analisarMovimentos(List<Telemetria> movimentos) {
+        System.out.println("DEBUG: Tentando conectar em: " + this.aiServiceUrl);
         // Log para debug
         System.out.println("Enviando " + movimentos.size() + " pontos de telemetria para o serviço Python...");
 
         // Faz o POST para o serviço Python (ex: endpoint /analisar)
         try {
+            URI targetUri = URI.create(this.aiServiceUrl + "/analisar");
             return restClient.post()
-                    .uri("/analisar")
+                    .uri(targetUri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(movimentos)
                     .retrieve()
@@ -39,17 +42,18 @@ public class PythonAiClientAdapter implements IAiClientPort {
         } catch (Exception e) {
             System.err.println("Erro ao chamar serviço Python: " + e.getMessage());
             // Retorna um fallback para não quebrar o fluxo síncrono por enquanto
-            return new FeedbackIA(); 
+            return new FeedbackIA();
         }
     }
 
     @Override
     public void solicitarRelatorioFinal(UUID sessaoId) {
         System.out.println("Trigger Assíncrono para IA -> Gerar Relatório Sessão: " + sessaoId);
-        
+
         // Chamada assíncrona (fire-and-forget ou fila)
         // Por enquanto, faremos uma chamada REST simples sem esperar resposta complexa
         try {
+            URI targetUri = URI.create(this.aiServiceUrl + "/relatorio/" + sessaoId);
             restClient.post()
                     .uri("/relatorio/" + sessaoId)
                     .retrieve()
