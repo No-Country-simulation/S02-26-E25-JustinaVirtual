@@ -9,6 +9,7 @@ import br.com.justina.domain.model.Telemetria;
 import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import br.com.justina.infrastructure.dto.TelemetriaDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Telemetria", description = "Gerenciamento de movimentos e sessões cirúrgicas simuladas")
 @Slf4j
-@RequestMapping
+@RequestMapping("/telemetria")
 @RestController
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
@@ -33,6 +35,10 @@ public class TelemetriaController {
     private final TelemetryEngine telemetryEngine;
     private final ConsultarTelemetriaUseCase consultarTelemetriaUseCase;
 
+    @Operation(
+            summary = "Receber movimentos de telemetria",
+            description = "Recebe um batch de movimentos, processa via TelemetryEngine e persiste apenas os válidos."
+    )
     @PostMapping("/movimentos")
     public ResponseEntity<Void> receberMovimentos(@RequestBody @Valid List<TelemetriaDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) {
@@ -71,6 +77,10 @@ public class TelemetriaController {
         }
     }
 
+    @Operation(
+            summary = "Finalizar cirurgia",
+            description = "Finaliza a sessão de simulação com base no ID informado."
+    )
     @PostMapping("/finalizar")
     public ResponseEntity<SessaoSimulacao> finalizarCirurgia(@RequestBody FinalizarCirurgiaDTO dto) {
         if (dto == null || dto.getSessaoId() == null) {
