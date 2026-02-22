@@ -42,8 +42,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/**",
+                                "/api/auth/**",
+                                "/api/telemetria/**",
+                                "/telemetria/**",
                                 "/h2-console/**",
                                 "/error",
+                                "/api/error",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"

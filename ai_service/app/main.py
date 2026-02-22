@@ -9,8 +9,8 @@ class TelemetryData(BaseModel):
     x: float
     y: float
     z: float
-    timestamp: float
-    instrument_id: str
+    timestamp: str
+    sessionId: str
 
 class AnalysisResponse(BaseModel):
     status: str
@@ -21,7 +21,7 @@ class AnalysisResponse(BaseModel):
 def read_root():
     return {"status": "online", "pytorch": torch.__version__}
 
-@app.post("/analyze", response_model=AnalysisResponse)
+@app.post("/analisar", response_model=AnalysisResponse)
 async def analyze_movement(data: List[TelemetryData]):
     if not data:
         raise HTTPException(status_code=400, detail="Sem dados")
