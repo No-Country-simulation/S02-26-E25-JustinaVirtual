@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 @Profile("dev")
 @RequiredArgsConstructor
 public class TelemetriaRepositoryAdapter implements ITelemetriaRepositoryPort {
