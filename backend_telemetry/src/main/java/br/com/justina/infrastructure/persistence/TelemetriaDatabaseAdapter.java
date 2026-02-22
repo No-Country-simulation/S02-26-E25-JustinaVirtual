@@ -18,7 +18,6 @@ import java.util.Optional;
 
 @Component
 @Primary
-@Profile("prod")
 @RequiredArgsConstructor
 public class TelemetriaDatabaseAdapter implements ITelemetriaRepositoryPort {
 
