@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import List
 import logging
 
-# Configuração de logging profissional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("justina-ai")
 
