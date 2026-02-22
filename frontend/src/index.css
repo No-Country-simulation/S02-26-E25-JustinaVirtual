@@ -6,48 +6,59 @@
 /* Global base styles – light & dark mode        */
 /* ============================================= */
 
-:root {
-  --color-background: theme('colors.gray.50');
-  --color-foreground: theme('colors.gray.900');
-  
-  --surface: hsl(0 0% 100%);          /* correct – white */
-  --border:  hsl(0 0% 89.8%);         /* ~gray-200 */
-  --navbar-height: 4rem;
+@layer base {
+  :root {
+    --color-background: 249 250 251;
+    --color-foreground: 17 24 39;
+    --surface: 0 0% 100%;
+    --border: 0 0% 89.8%;
+    --navbar-height: 4rem;
+  }
+
+  .dark {
+    --color-background: 3 7 18;
+    --color-foreground: 243 244 246;
+    --surface: 240 10% 10%;
+    --border: 240 5.9% 20%;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  button {
+    outline: none;
+    border-color: inherit;
+  }
+
+  button:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+
 }
 
-.dark {
-  --color-background: theme('colors.gray.950');
-  --color-foreground: theme('colors.gray.100');
-  
-  --surface: hsl(240 10% 10%);        /* correct – dark gray */
-  --border:  hsl(240 5.9% 20%);
-  --navbar-height: 4rem;
-}
 
-/* Apply to body/html */
-html,
-body {
-  @apply min-h-screen;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-}
-
-/* Smooth theme transition */
 html {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Scrollbar colors */
 html {
-  scrollbar-color: theme('colors.gray.700') theme('colors.gray.900');
+  scrollbar-color: #374151 #111827;
 }
 
-.dark html {
-  scrollbar-color: theme('colors.gray.600') theme('colors.gray.950');
+html.dark {
+  scrollbar-color: #4b5563 #030712;
 }
 
 @media (min-width: 768px) {
   :root {
-    --navbar-height: 5rem;   /* optional: taller on desktop */
+    --navbar-height: 5rem;
   }
 }
