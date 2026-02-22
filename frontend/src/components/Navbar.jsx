@@ -14,7 +14,6 @@ export default function Navbar() {
       className={`
         w-full px-6 py-4
         bg-surface
-      //   bg-white dark:bg-gray-950
         border-b border-border
         flex justify-between items-center
         sticky top-0 left-0 right-0 z-50
