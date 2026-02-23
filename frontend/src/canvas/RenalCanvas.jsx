@@ -9,11 +9,11 @@ export default function RenalCanvas() {
   const imageRef = useRef(null);
   const targetZoneRef = useRef(createTargetZone());
   const [path, setPath] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 }); // Para o ponteiro customizado
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // 1. Setup Inicial
+  // 1. Setup Inicial e Carregamento
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -25,30 +25,27 @@ export default function RenalCanvas() {
     img.src = rimImage;
     img.onload = () => {
       imageRef.current = img;
-      render();
+      render(); 
     };
   }, []);
 
   // 2. Loop de Renderização Consolidado
+  // Usamos useEffect para reagir a mudanças, mas o render desenha tudo
   useEffect(() => {
     render();
-  }, [path, mousePos]); // Re-renderiza quando move ou grava
+  }, [path, mousePos]); 
 
   const render = () => {
     const canvas = canvasRef.current;
     if (!canvas || !imageRef.current) return;
     const ctx = canvas.getContext("2d");
 
-    // Limpa o canvas
+    // A ordem aqui é vital: Fundo -> Alvo -> Rastro -> Ponteira
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Fundo Anatômico (Rim do Everton)
     ctx.drawImage(imageRef.current, 0, 0, canvas.width, canvas.height);
-
-    // Zona de Sucesso (Target)
     targetZoneRef.current.draw(ctx);
 
-    // Renderização do Rastro Neon
+    // Desenha o Rastro Neon
     const tail = path.slice(-60);
     tail.forEach((p, i) => {
       if (i === 0) return;
@@ -70,42 +67,49 @@ export default function RenalCanvas() {
       ctx.shadowBlur = 0;
     });
 
-    // Ponteiro Laser Customizado (Sugestão de "Ponteira")
+    // DESENHO DA PONTEIRA (Sempre por último para ficar no topo)
     const isNowInside = targetZoneRef.current.contains(mousePos.x, mousePos.y);
     drawLaserPointer(ctx, mousePos.x, mousePos.y, isNowInside);
   };
 
-  // Função auxiliar para desenhar a ponteira sem precisar de imagem paga
   const drawLaserPointer = (ctx, x, y, isInside) => {
     ctx.save();
+    // Brilho externo da ponta
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fillStyle = isInside ? "#4ade80" : "#f87171";
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 20;
     ctx.shadowColor = isInside ? "#4ade80" : "#f87171";
     ctx.fill();
     
-    // Mira interna
+    // Crosshair (Mira branca de precisão)
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(x - 10, y); ctx.lineTo(x + 10, y);
-    ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 10);
+    // Linhas da mira
+    ctx.moveTo(x - 12, y); ctx.lineTo(x + 12, y);
+    ctx.moveTo(x, y - 12); ctx.lineTo(x, y + 12);
+    ctx.stroke();
+
+    // Círculo central da mira
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   };
 
-  // 3. Captura de Movimento Otimizada
   const handleMove = (e) => {
     if (isFinished) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
 
-    setMousePos({ x, y }); // Atualiza posição visual
+    // Atualiza a posição da ponteira em todos os movimentos
+    setMousePos({ x, y }); 
 
     const last = path[path.length - 1];
-    // Só grava se mover mais de 3px (Economiza dados pro Fabio)
+    // Grava o ponto para a telemetria apenas se houver movimento significativo
     if (!last || Math.abs(x - last.x) > 3 || Math.abs(y - last.y) > 3) {
       setPath(prev => [...prev, { x, y, t: Date.now() }]);
     }
@@ -134,9 +138,9 @@ export default function RenalCanvas() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl transition-all duration-500 hover:border-slate-700">
+    <div className="flex flex-col items-center gap-4 p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl">
       
-      {/* Header do HUD */}
+      {/* HUD Superior */}
       <div className="flex w-full justify-between items-end mb-2 px-2">
         <div className="flex flex-col">
           <h2 className="text-white font-black tracking-tighter text-2xl uppercase">
@@ -148,20 +152,18 @@ export default function RenalCanvas() {
         </div>
         <div className="text-right">
           <span className="text-slate-500 text-[9px] uppercase font-bold">Protocolo</span>
-          <div className="text-green-500 font-mono text-xs animate-pulse">TELEMETRIA ATIVA // FE-5</div>
+          <div className="text-green-500 font-mono text-xs animate-pulse font-bold">TELEMETRIA ATIVA // FE-5</div>
         </div>
       </div>
       
-      {/* Container do Canvas */}
+      {/* Área do Simulador */}
       <div className="relative bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-[0_0_60px_rgba(0,0,0,0.8)]">
         <canvas 
           ref={canvasRef} 
           onMouseMove={handleMove} 
-          // Esconde o mouse padrão para usar a ponteira laser 
           className="cursor-none active:scale-[1.001] transition-transform" 
         />
         
-        {/* Overlay de Sincronização */}
         {isSending && (
           <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center backdrop-blur-md">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -172,8 +174,8 @@ export default function RenalCanvas() {
         )}
       </div>
       
-      {/* Footer do HUD */}
-      <div className="w-full flex justify-between items-center px-4 py-2 bg-slate-800/30 rounded-2xl border border-slate-800/50">
+      {/* HUD Inferior */}
+      <div className="w-full flex justify-between items-center px-4 py-3 bg-slate-800/30 rounded-2xl border border-slate-800/50">
         <div className="flex gap-8">
           <div className="flex flex-col">
             <span className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">Data Points</span>
@@ -194,12 +196,12 @@ export default function RenalCanvas() {
           disabled={isFinished || path.length === 0}
           className="group relative px-12 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:translate-y-1"
         >
-          {isSending ? "Processando..." : "Finalizar Procedimento"}
+          {isSending ? "ENVIANDO..." : "Finalizar Procedimento"}
         </button>
       </div>
       
-      <p className="text-[9px] text-slate-600 uppercase font-mono">
-        Ambiente de Simulação Virtual - Justina Project 2026
+      <p className="text-[9px] text-slate-600 uppercase font-mono tracking-widest">
+        Sistema de Monitoramento Cirúrgico - Justina Project 2026
       </p>
     </div>
   );
