@@ -32,29 +32,20 @@ class TelemetriaControllerTest {
 
     @Test
     void deveRetornarFeedbackQuandoReceberMovimentosValidos() {
-        // 1. Arrange (Preparar)
         UUID usuarioId = UUID.randomUUID();
-        Telemetria telemetria = new Telemetria();
-        telemetria.setEixoX(10.0);
-        List<Telemetria> movimentos = Collections.singletonList(telemetria);
-
-        // Criamos o objeto "Envelope" que o Controller espera agora
+        List<Telemetria> movimentos = Collections.singletonList(new Telemetria());
+        
         AnaliseRequest request = new AnaliseRequest();
         request.setUsuarioId(usuarioId);
         request.setMovimentos(movimentos);
 
-        FeedbackIA feedbackEsperado = new FeedbackIA("APROVADO", "Movimento OK", 0.95);
+        FeedbackIA feedbackEsperado = new FeedbackIA("APROVADO", "Bom", 0.9);
 
-        // Ensinamos o Mock a aceitar (UUID, List)
         when(registrarMovimentoUseCase.executar(eq(usuarioId), any())).thenReturn(feedbackEsperado);
 
-        // 2. Act (Executar)
         ResponseEntity<FeedbackIA> response = controller.receberMovimentos(request);
 
-        // 3. Assert (Validar)
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("APROVADO", response.getBody().getStatus());
     }
-
-    
 }
