@@ -15,12 +15,12 @@ A plataforma é composta por:
 - AI Service (análise de métricas)
 
 ### Ambiente de Produção
-```bash
+
 - **Backend Base URL:** https://justina-backend.onrender.com/api
 - **Swagger Docs (Produção):** https://justina-backend.onrender.com/api/swagger-ui/index.html
 - **IA Service:** https://justina-ai-service.onrender.com
 - **Frontend:** https://s02-26-e25-justina-virtual.vercel.app/
-```
+
 ---
 
 ## Stack
