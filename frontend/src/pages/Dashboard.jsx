@@ -38,7 +38,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-muted p-8">
+    <div className="min-h-screen bg-color-background p-8">
       <div className="max-w-6xl mx-auto space-y-8">
 
         {/* HEADER */}

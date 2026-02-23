@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
@@ -5,23 +6,41 @@ import random
 import os
 import matplotlib.pyplot as plt
 from fpdf import FPDF
+=======
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from typing import List
+import logging
+>>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf
 
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("justina-ai")
 
+<<<<<<< HEAD
 # Cria a pasta para salvar os PDFs se não existir
 os.makedirs("relatorios_gerados", exist_ok=True)
+=======
+app = FastAPI(title="Justina AI Service", version="1.0.0")
+>>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf
 
-class TelemetriaDTO(BaseModel):
-    eixoX: float
-    eixoY: float
-    eixoZ: float
-    tempo: Optional[str] = None
+@app.post("/analisar")
+async def analisar_movimentos(request: Request):
+    try:
+        dados_lista = await request.json()
+        
+        # Log de recepção com contexto
+        count = len(dados_lista)
+        logger.info(f"Recebidos {count} registros para processamento.")
 
-class FeedbackIADTO(BaseModel):
-    status: str
-    mensagem: str
-    precisao: float
+        if count > 0:
+            # Extração segura dos dados
+            telemetria = dados_lista[0]
+            x = float(telemetria.get("eixoX", 0.0))
+            y = float(telemetria.get("eixoY", 0.0))
+            z = float(telemetria.get("eixoZ", 0.0))
+            session_id = telemetria.get("sessionId", "N/A")
 
+<<<<<<< HEAD
 # --- Endpoint 1: Análise em Tempo Real ---
 @app.post("/analisar", response_model=FeedbackIADTO)
 def analisar_movimentos(movimentos: List[TelemetriaDTO]):
@@ -80,3 +99,34 @@ def gerar_relatorio_final(sessao_id: str):
     except Exception as e:
         print(f"Erro ao gerar PDF: {e}")
         return {"status": "ERRO", "mensagem": str(e)}
+=======
+            # Cálculo de score (Lógica de Negócio)
+            soma_eixos = abs(x) + abs(y) + abs(z)
+            # Normalização: estabilidade perfeita = 1.0
+            score = 1.0 - min(0.5, soma_eixos / 100.0) if soma_eixos > 0 else 1.0
+            
+            logger.info(f"Sessão: {session_id} | Score: {score:.4f} | Eixos: X={x}, Y={y}, Z={z}")
+        else:
+            score = 0.0
+            logger.warning("Lote de telemetria vazio recebido.")
+
+        # Determinação do status e recomendações profissionais
+        is_stable = score > 0.7
+        
+        return {
+            "status": "APROVADO" if is_stable else "ATENÇÃO",
+            "mensagem": "Processamento de telemetria realizado com sucesso",
+            "precisao": round(score, 4),
+            "recomendacao": "Condições de movimento dentro dos parâmetros normais" if is_stable 
+                            else "Alerta: Instabilidade detectada acima do limite de segurança"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no processamento: {str(e)}")
+        return {
+            "status": "ERRO",
+            "mensagem": f"Falha interna no motor de análise: {str(e)}",
+            "precisao": 0.0,
+            "recomendacao": "Reinicie a coleta de dados"
+        }
+>>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf

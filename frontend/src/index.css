@@ -6,33 +6,59 @@
 /* Global base styles – light & dark mode        */
 /* ============================================= */
 
-:root {
-  --color-background: theme('colors.gray.50');
-  --color-foreground: theme('colors.gray.900');
+@layer base {
+  :root {
+    --color-background: 249 250 251;
+    --color-foreground: 17 24 39;
+    --surface: 0 0% 100%;
+    --border: 0 0% 89.8%;
+    --navbar-height: 4rem;
+  }
+
+  .dark {
+    --color-background: 3 7 18;
+    --color-foreground: 243 244 246;
+    --surface: 240 10% 10%;
+    --border: 240 5.9% 20%;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  button {
+    outline: none;
+    border-color: inherit;
+  }
+
+  button:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+
 }
 
-.dark {
-  --color-background: theme('colors.gray.950');
-  --color-foreground: theme('colors.gray.100');
-}
 
-/* Apply to body/html */
-html, body {
-  @apply min-h-screen;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-}
-
-/* Optional: smooth transition when theme changes */
 html {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Prevent scrollbars from looking weird in dark mode */
 html {
-  scrollbar-color: theme('colors.gray.700') theme('colors.gray.900');
+  scrollbar-color: #374151 #111827;
 }
 
-.dark html {
-  scrollbar-color: theme('colors.gray.600') theme('colors.gray.950');
+html.dark {
+  scrollbar-color: #4b5563 #030712;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --navbar-height: 5rem;
+  }
 }
