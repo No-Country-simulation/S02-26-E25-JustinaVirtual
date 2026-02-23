@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import CanvasStage from "./CanvasStage";
 import { createInstrument } from "./Instrument";
-import { createTargetZone } from "./TargetZone";
+import { createTargetZone } from "./targetZone";
 import { createMetrics } from "./MetricsEngine";
 
 const instrument = createInstrument();
