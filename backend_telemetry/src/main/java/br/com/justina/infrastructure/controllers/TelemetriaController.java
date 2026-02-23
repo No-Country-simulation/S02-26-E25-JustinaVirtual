@@ -1,85 +1,68 @@
 package br.com.justina.infrastructure.controllers;
 
-import br.com.justina.application.usecases.ConsultarTelemetriaUseCase;
-import br.com.justina.application.services.TelemetryEngine;
+import br.com.justina.application.dto.AnaliseRequest;
 import br.com.justina.application.usecases.FinalizarCirurgiaUseCase;
 import br.com.justina.application.usecases.RegistrarMovimentoUseCase;
+import br.com.justina.domain.model.FeedbackIA;
 import br.com.justina.domain.model.SessaoSimulacao;
-import br.com.justina.domain.model.Telemetria;
 import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
-import br.com.justina.infrastructure.dto.TelemetriaDTO;
+// Imports da equipe (Swagger/Docs)
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-@Tag(name = "Telemetria", description = "Gerenciamento de movimentos e sessões cirúrgicas simuladas")
 @Slf4j
-@RequestMapping("/telemetria")
 @RestController
+@RequestMapping("/api/telemetria") // Mantemos o /api por padrão REST
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Telemetria", description = "Gerenciamento de movimentos e sessões cirúrgicas simuladas")
 public class TelemetriaController {
 
     private final RegistrarMovimentoUseCase registrarMovimentoUseCase;
     private final FinalizarCirurgiaUseCase finalizarCirurgiaUseCase;
-    private final TelemetryEngine telemetryEngine;
-    private final ConsultarTelemetriaUseCase consultarTelemetriaUseCase;
 
+    // --- ENDPOINT PRINCIPAL ---
     @Operation(
-            summary = "Receber movimentos de telemetria",
-            description = "Recebe um batch de movimentos, processa via TelemetryEngine e persiste apenas os válidos."
+        summary = "Receber movimentos de telemetria",
+        description = "Recebe um batch de movimentos com ID do usuário, processa via IA e persiste."
     )
-    @PostMapping("/movimentos")
-    public ResponseEntity<Void> receberMovimentos(@RequestBody @Valid List<TelemetriaDTO> dtos) {
-        if (dtos == null || dtos.isEmpty()) {
-            log.warn("Recebido batch de movimentos vazio ou nulo");
+    @PostMapping("/analisar") // Mantemos /analisar para compatibilidade com seu frontend
+    public ResponseEntity<FeedbackIA> receberMovimentos(@RequestBody AnaliseRequest request) {
+        // Validação básica
+        if (request == null || request.getUsuarioId() == null || request.getMovimentos() == null) {
+            log.warn("Payload inválido recebido em /analisar: Usuário ou movimentos nulos");
             return ResponseEntity.badRequest().build();
         }
 
-        // Tenta extrair sessionId do primeiro item para log
-        String sessionId = dtos.get(0).getSessionId();
-        MDC.put("sessionId", sessionId != null ? sessionId : "UNKNOWN");
-
+        // Log estruturado (MDC) trazido pela equipe
+        MDC.put("usuarioId", request.getUsuarioId().toString());
+        
         try {
-            List<Telemetria> movimentosValidos = new ArrayList<>();
+            log.info("Recebendo batch de {} movimentos para o usuário {}", 
+                    request.getMovimentos().size(), request.getUsuarioId());
 
-            for (TelemetriaDTO dto : dtos) {
-                // Processa via Engine (Normalização + Throttling)
-                Telemetria telemetria = telemetryEngine.process(dto);
-                
-                // Se não foi throttled (retornou objeto), adiciona na lista para salvar
-                if (telemetria != null) {
-                    movimentosValidos.add(telemetria);
-                }
-            }
-
-            if (!movimentosValidos.isEmpty()) {
-                // Envia apenas os válidos para o UseCase (Persistência + IA realtime se houver)
-                log.info("Processando batch com {} movimentos válidos (Total recebido: {})", movimentosValidos.size(), dtos.size());
-                registrarMovimentoUseCase.executar(movimentosValidos);
-            } else {
-                log.warn("Todos os {} movimentos do batch foram descartados/throttled ou inválidos.", dtos.size());
-            }
-
-            return ResponseEntity.status(HttpStatus.CREATED).build();
+            // Chama UseCase passando o ID e a Lista (Sua lógica correta)
+            FeedbackIA feedback = registrarMovimentoUseCase.executar(
+                request.getUsuarioId(), 
+                request.getMovimentos()
+            );
+            
+            return ResponseEntity.ok(feedback);
+            
         } finally {
-            MDC.remove("sessionId");
+            MDC.remove("usuarioId");
         }
     }
 
+    // --- ENDPOINT FINALIZAR ---
     @Operation(
-            summary = "Finalizar cirurgia",
-            description = "Finaliza a sessão de simulação com base no ID informado."
+        summary = "Finalizar cirurgia",
+        description = "Finaliza a sessão de simulação com base no ID informado."
     )
     @PostMapping("/finalizar")
     public ResponseEntity<SessaoSimulacao> finalizarCirurgia(@RequestBody FinalizarCirurgiaDTO dto) {
@@ -91,17 +74,12 @@ public class TelemetriaController {
         MDC.put("sessionId", dto.getSessaoId().toString());
         try {
             log.info("Requisição de finalização recebida");
-            SessaoSimulacao sessao = finalizarCirurgiaUseCase.executar(dto.getSessaoId());
+            
+            // Chama o UseCase corrigido
+            SessaoSimulacao sessao = finalizarCirurgiaUseCase.executar(dto.getSessaoId(), dto);
             return ResponseEntity.ok(sessao);
         } finally {
             MDC.remove("sessionId");
         }
-    }
-
-    @Operation(summary = "Busca telemetria de uma sessão", description = "Retorna todos os pontos de movimento ordenados para construção de gráficos.")
-    @GetMapping("/movimentos/{sessaoId}")
-    public ResponseEntity<List<Telemetria>> obterTelemetria(@PathVariable UUID sessaoId) {
-        List<Telemetria> dados = consultarTelemetriaUseCase.executar(sessaoId);
-        return ResponseEntity.ok(dados);
     }
 }

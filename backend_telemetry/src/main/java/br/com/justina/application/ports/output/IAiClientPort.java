@@ -7,5 +7,6 @@ import java.util.UUID;
 
 public interface IAiClientPort {
     FeedbackIA analisarMovimentos(List<Telemetria> movimentos);
-    void solicitarRelatorioFinal(UUID sessaoId); // Novo método para trigger assíncrono
+    // Novo método exigido pelo UseCase da equipe
+    void solicitarRelatorioFinal(UUID sessaoId);
 }

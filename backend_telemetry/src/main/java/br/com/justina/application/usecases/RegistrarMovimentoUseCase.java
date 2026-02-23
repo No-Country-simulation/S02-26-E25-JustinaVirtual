@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -19,24 +20,30 @@ public class RegistrarMovimentoUseCase {
     private final ITelemetriaRepositoryPort repository;
     private final IAiClientPort aiClient;
 
-    public FeedbackIA executar(List<Telemetria> movimentos) {
-        log.info("Persistindo {} movimentos e solicitando análise IA", movimentos.size());
+    public FeedbackIA executar(UUID usuarioId, List<Telemetria> movimentos) {
+        log.info("Persistindo {} movimentos para usuário {} e solicitando análise IA", movimentos.size(), usuarioId);
 
+        // 1. IA Analisa
         FeedbackIA feedback = aiClient.analisarMovimentos(movimentos);
-        repository.salvarTudo(movimentos);
+        
+        // 2. Persistência (Cria sessão e salva)
+        repository.salvarTudo(usuarioId, movimentos);
 
+        // 3. Lógica da Equipe 
         if (feedback != null && "ERRO".equalsIgnoreCase(feedback.getStatus())) {
             log.warn("Feedback IA indica ERRO no movimento");
-            SessaoSimulacao sessao = movimentos.get(0).getSessao();
-
-            if (sessao != null) {
+            
+            
+            if (!movimentos.isEmpty() && movimentos.get(0).getSessao() != null) {
+                SessaoSimulacao sessao = movimentos.get(0).getSessao();
                 int erros = (sessao.getTotalErros() != null) ? sessao.getTotalErros() : 0;
                 sessao.setTotalErros(erros + 1);
 
                 repository.salvarSessao(sessao);
-                log.info("Feedback IA processado: Erro registrado via status da IA para a sessão {}", sessao.getId());
+                log.info("Erro registrado na sessão {}", sessao.getId());
             }
         }
+        
         return feedback;
     }
 }

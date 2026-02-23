@@ -19,22 +19,22 @@ public class PythonAiClientAdapter implements IAiClientPort {
     private final RestClient restClient;
     private final String aiServiceUrl;
 
-    public PythonAiClientAdapter(@Value("${app.ai-service.url:http://ai_service:8000}") String aiServiceUrl) {
+    // Construtor Híbrido: Usa localhost por padrão (seu), mas com a limpeza de string da equipe
+    public PythonAiClientAdapter(@Value("${app.ai-service.url:http://localhost:5000}") String aiServiceUrl) {
         this.restClient = RestClient.builder().build();
-        // Remove espaços, quebras de linha invisíveis (\s) e barras no final
         this.aiServiceUrl = aiServiceUrl.trim().replaceAll("\\s", "").replaceAll("/+$", "");
     }
 
     @Override
     public FeedbackIA analisarMovimentos(List<Telemetria> movimentos) {
         try {
-            // Constrói a URI de forma segura
+            // Usa UriComponentsBuilder (Mais seguro, vindo da equipe)
             URI targetUri = UriComponentsBuilder.fromHttpUrl(this.aiServiceUrl)
                     .path("/analisar")
                     .build()
                     .toUri();
 
-            System.out.println("DEBUG: Enviando " + movimentos.size() + " pontos para: " + targetUri);
+            System.out.println("DEBUG: Enviando " + movimentos.size() + " pontos para IA: " + targetUri);
 
             return restClient.post()
                     .uri(targetUri)
@@ -44,26 +44,28 @@ public class PythonAiClientAdapter implements IAiClientPort {
                     .body(FeedbackIA.class);
         } catch (Exception e) {
             System.err.println("Erro ao chamar serviço Python: " + e.getMessage());
-            return new FeedbackIA();
+            // Retorna feedback de erro para não quebrar o Java
+            return new FeedbackIA("ERRO", "Falha na comunicação com IA", 0.0);
         }
     }
 
     @Override
     public void solicitarRelatorioFinal(UUID sessaoId) {
         try {
+            // Endpoint que criamos no Python (/relatorio/{id})
             URI targetUri = UriComponentsBuilder.fromHttpUrl(this.aiServiceUrl)
                     .path("/relatorio/{id}")
                     .buildAndExpand(sessaoId)
                     .toUri();
 
-            System.out.println("DEBUG: Trigger Relatório Final em: " + targetUri);
+            System.out.println("DEBUG: Solicitando PDF para IA em: " + targetUri);
 
             restClient.post()
                     .uri(targetUri)
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
-            System.err.println("Falha ao notificar IA: " + e.getMessage());
+            System.err.println("Falha ao solicitar relatório para IA: " + e.getMessage());
         }
     }
 }

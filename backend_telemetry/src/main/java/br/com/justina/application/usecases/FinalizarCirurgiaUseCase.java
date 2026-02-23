@@ -1,83 +1,31 @@
 package br.com.justina.application.usecases;
 
-import br.com.justina.application.ports.output.IAiClientPort;
 import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
-import br.com.justina.domain.model.Telemetria;
+import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FinalizarCirurgiaUseCase {
 
     private final ITelemetriaRepositoryPort repository;
-    private final IAiClientPort aiClient;
 
-    @Transactional
-    public SessaoSimulacao executar(UUID sessaoId) {
-        log.info("Iniciando finalização da cirurgia/sessão: {}", sessaoId);
-
-        // 1. Buscar Sessão
+    
+    public SessaoSimulacao executar(UUID sessaoId, FinalizarCirurgiaDTO dto) {
+        
         SessaoSimulacao sessao = repository.buscarSessaoPorId(sessaoId)
-                .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada: " + sessaoId));
+                .orElseThrow(() -> new RuntimeException("Sessão não encontrada: " + sessaoId));
 
-        // 2. Validar Status
-        if (sessao.isFinalizada()) {
-            log.warn("Tentativa de finalizar sessão já encerrada: {}", sessaoId);
-            return sessao; // Idempotência: se já finalizou, retorna como está
-        }
-
-        // 3. Atualizar Dados de Finalização
-        LocalDateTime agora = LocalDateTime.now();
-        sessao.setDataFim(agora);
+        sessao.setDataFim(LocalDateTime.now());
         sessao.setStatus(StatusSessao.FINALIZADA);
-
-        // Calcular tempo total em segundos
-        if (sessao.getDataInicio() != null) {
-            long segundos = Duration.between(sessao.getDataInicio(), agora).getSeconds();
-            sessao.setTempoTotalSegundos(segundos);
-        }
-
-        List<Telemetria> pontos = repository.buscarPorSessao(sessaoId);
-        double distancia = calcularDistancia3D(pontos);
-        log.info("Distância total calculada para a sessão {}: {} unidades", sessaoId, distancia);
-
-        // 4. Salvar (Persistência)
-        SessaoSimulacao sessaoSalva = repository.salvarSessao(sessao);
-        log.info("Sessão {} finalizada com sucesso. Tempo total: {}s", sessaoId, sessao.getTempoTotalSegundos());
-
-        // 5. Acionar IA (Trigger Assíncrono)
-        try {
-            aiClient.solicitarRelatorioFinal(sessaoId);
-        } catch (Exception e) {
-            log.error("Erro ao solicitar relatório final para IA (Sessão {}): {}", sessaoId, e.getMessage());
-            // Não relança exceção para não rollbackar a finalização da sessão no banco
-        }
-
-        return sessaoSalva;
-    }
-    private double calcularDistancia3D(List<Telemetria> pontos) {
-        double total = 0;
-        for (int i = 0; i < pontos.size() - 1; i++) {
-            Telemetria p1 = pontos.get(i);
-            Telemetria p2 = pontos.get(i + 1);
-
-            total += Math.sqrt(
-                    Math.pow(p2.getEixoX() - p1.getEixoX(), 2) +
-                            Math.pow(p2.getEixoY() - p1.getEixoY(), 2) +
-                            Math.pow(p2.getEixoZ() - p1.getEixoZ(), 2)
-            );
-        }
-        return total;
+        
+        
+        return repository.salvarSessao(sessao);
     }
 }

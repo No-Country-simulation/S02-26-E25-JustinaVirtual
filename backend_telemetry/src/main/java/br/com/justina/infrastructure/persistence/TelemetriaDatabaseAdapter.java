@@ -8,13 +8,12 @@ import br.com.justina.domain.model.Usuario;
 // import br.com.justina.domain.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @Primary
@@ -26,21 +25,28 @@ public class TelemetriaDatabaseAdapter implements ITelemetriaRepositoryPort {
     // private final UsuarioRepository usuarioRepo;
 
     @Override
-    public void salvarTudo(List<Telemetria> movimentos) {
-        if (movimentos == null || movimentos.isEmpty()) return;
+    public void salvarTudo(UUID usuarioId, List<Telemetria> movimentos) {
+        if (movimentos.isEmpty()) return;
 
-        String sId = movimentos.get(0).getSessionId();
-
-        SessaoSimulacao sessao = sessaoRepo.findById(UUID.fromString(sId))
-                .orElseThrow(() -> new RuntimeException("Sessão não encontrada: " + sId));
+        // Usuario usuarioFake = new Usuario(); 
+        
+        SessaoSimulacao sessao = new SessaoSimulacao();
+        // sessao.setUsuario(usuarioFake); 
+        sessao.setDataInicio(LocalDateTime.now());
+        sessao.setStatus(StatusSessao.EM_ANDAMENTO);
+        sessao.setStatusIa("PROCESSADO"); 
+        
+        // sessao = sessaoRepo.save(sessao); 
 
         for (Telemetria t : movimentos) {
-            t.setSessao(sessao); // AGORA SIM o vínculo existe
-            if (t.getTimestamp() == null) t.setTimestamp(LocalDateTime.now());
+            t.setSessao(sessao);
+            if (t.getTimestamp() == null) {
+                t.setTimestamp(LocalDateTime.now());
+            }
         }
-
-        telemetriaRepo.saveAll(movimentos);
-        System.out.println("PERSISTÊNCIA: " + movimentos.size() + " registros salvos com sucesso.");
+        
+        // telemetriaRepo.saveAll(movimentos);
+        System.out.println("⚠️ COMPILAÇÃO: Dados recebidos (Persistência pausada para ajuste de Usuário)");
     }
 
     @Override
@@ -48,7 +54,6 @@ public class TelemetriaDatabaseAdapter implements ITelemetriaRepositoryPort {
         return sessaoRepo.save(sessao);
     }
 
-    
     @Override
     public Optional<SessaoSimulacao> buscarSessaoPorId(UUID id) {
         return sessaoRepo.findById(id);
@@ -56,6 +61,7 @@ public class TelemetriaDatabaseAdapter implements ITelemetriaRepositoryPort {
 
     @Override
     public List<Telemetria> buscarPorSessao(UUID sessaoId) {
-        return telemetriaRepo.findBySessaoId(sessaoId);
+        return telemetriaRepo.findBySessao_Id(sessaoId);
     }
 }
+
