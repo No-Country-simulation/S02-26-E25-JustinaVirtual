@@ -21,9 +21,6 @@ export default function MainSection() {
         
         {/* Lado esquerdo – Registro */}
         <div className="bg-color-background p-8 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-6">
-            User Registration
-          </h2>
           {/* Passando uma função para o formulário avisar quando terminar */}
           <RegistrationForm onRegisterSuccess={() => setIsRegistered(true)} />
 
@@ -49,14 +46,14 @@ export default function MainSection() {
           {isRegistered ? (
             <Link
               to="/simulator"
-              className="inline-block bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-md text-lg transition shadow-lg"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all font-black text-xs uppercase tracking-[0.2em] shadow-lg mt-4"
             >
               Start Simulator Now →
             </Link>
           ) : (
             <button
               disabled
-              className="inline-block bg-gray-400 text-white px-8 py-4 rounded-md text-lg cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all font-black text-xs uppercase tracking-[0.2em] shadow-lg mt-4"
             >
               Register to Unlock Simulator
             </button>
