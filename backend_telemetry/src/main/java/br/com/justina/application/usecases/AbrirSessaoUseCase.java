@@ -13,8 +13,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,19 +23,16 @@ public class AbrirSessaoUseCase {
 
     @Transactional
     public SessaoResponse executar() {
+        String emailLogado = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        UUID userId = (UUID) SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getPrincipal();
-
-        Usuario usuario = usuarioRepository.findById(userId)
+        Usuario usuario = usuarioRepository.findByEmail(emailLogado)
                 .orElseThrow(() -> {
-                    log.error("Usuário não encontrado: {}", userId);
+                    log.error("Tentativa de abrir sessão para usuário inexistente: {}", emailLogado);
                     return new AuthenticationException("Usuário não encontrado.");
                 });
 
         if (sessaoRepository.existsByUsuarioAndStatus(usuario, StatusSessao.EM_ANDAMENTO)) {
-            log.warn("Bloqueada tentativa de múltiplas sessões para o usuário: {}", userId);
+            log.warn("Bloqueada tentativa de múltiplas sessões para o usuário: {}", emailLogado);
             throw new IllegalStateException("O usuário já possui uma simulação em andamento.");
         }
 
@@ -47,7 +42,7 @@ public class AbrirSessaoUseCase {
 
         SessaoSimulacao salva = sessaoRepository.save(novaSessao);
 
-        log.info("Sessão iniciada com sucesso. ID: {} | Usuário: {}", salva.getId(), userId);
+        log.info("Sessão iniciada com sucesso. ID: {} | Usuário: {}", salva.getId(), emailLogado);
 
         return new SessaoResponse(
                 salva.getId(),
