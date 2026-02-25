@@ -71,3 +71,5 @@ export default function TrainingHUD({ path = [] }) {
     </div>
   );
 }
+
+// if (!session) return null;
