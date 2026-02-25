@@ -21,7 +21,7 @@ export default function TrainingHUD({ path = [] }) {
   if (!session) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full p-4 z-50 pointer-events-none font-mono">
+    <div className="fixed top-0 left-0 w-full h-full p-4 z-[100] pointer-events-none font-mono">
       
       {/* CABEÇALHO SÓLIDO */}
       <div className="flex justify-between items-start text-[11px] text-blue-400">

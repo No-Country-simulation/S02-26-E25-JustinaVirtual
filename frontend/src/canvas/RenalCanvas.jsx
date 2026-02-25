@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiService } from "../services/apiService";
 import { useTrainingSession } from "../contexts/TrainingSessionContext";
 import { createTargetZone } from "../simulator2d/targetZone.jsx";
-import TrainingHUD from "../components/hud/TrainingHUD"; // Importação do  HUD
+import TrainingHUD from "../components/hud/TrainingHUD"; // Importação do HUD v1.0.3
 import rimImage from "../assets/ImagemRimPelveRenal.jpg";
 
 export default function RenalCanvas() {
@@ -15,9 +15,9 @@ export default function RenalCanvas() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [feedback, setFeedback] = useState(null); // Para guardar a resposta da IA
+  const [feedback, setFeedback] = useState(null); // Armazena a resposta da IA para o HUD
 
-  // 1. Setup Inicial e Carregamento da Imagem
+  // 1. Setup Inicial e Carregamento da Imagem do Rim
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -33,7 +33,7 @@ export default function RenalCanvas() {
     };
   }, []);
 
-  // 2. Loop de Renderização (Reage a movimentos e novos pontos)
+  // 2. Loop de Renderização reativo
   useEffect(() => {
     render();
   }, [path, mousePos]); 
@@ -43,14 +43,14 @@ export default function RenalCanvas() {
     if (!canvas || !imageRef.current) return;
     const ctx = canvas.getContext("2d");
 
-    // Limpeza e Fundo
+    // Limpeza de frame e desenho do fundo
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageRef.current, 0, 0, canvas.width, canvas.height);
     
-    // Desenha a zona alvo (onde o médico deve operar)
+    // Desenha a zona alvo de sutura/incisão
     targetZoneRef.current.draw(ctx);
 
-    // Desenha o Rastro Neon (limitado aos últimos 60 pontos para performance)
+    // Desenha o Rastro Neon (Otimizado: últimos 60 pontos)
     const tail = path.slice(-60);
     tail.forEach((p, i) => {
       if (i === 0) return;
@@ -72,7 +72,7 @@ export default function RenalCanvas() {
       ctx.shadowBlur = 0;
     });
 
-    // Desenha a ponteira (Mira Laser)
+    // Desenha a mira laser de precisão
     const isNowInside = targetZoneRef.current.contains(mousePos.x, mousePos.y);
     drawLaserPointer(ctx, mousePos.x, mousePos.y, isNowInside);
   };
@@ -109,7 +109,7 @@ export default function RenalCanvas() {
     setMousePos({ x, y }); 
 
     const last = path[path.length - 1];
-    // Otimização: Só grava o ponto se mover mais de 3 pixels
+    // Grava telemetria apenas se houver deslocamento significativo (>3px)
     if (!last || Math.abs(x - last.x) > 3 || Math.abs(y - last.y) > 3) {
       setPath(prev => [...prev, { x, y, t: Date.now() }]);
     }
@@ -127,11 +127,12 @@ export default function RenalCanvas() {
     }));
 
     try {
+      // Envia dados para o backend Java/IA Service
       const response = await apiService.sendTelemetry(payload);
-      setFeedback(response); // Guarda o resultado (nota, pdf, etc)
-      alert(`Procedimento Finalizado! IA: ${response.mensagem || "Dados processados"}`);
+      setFeedback(response); 
+      alert(`Procedimento Finalizado! IA: ${response.mensagem || "Dados processados com sucesso."}`);
     } catch (err) {
-      alert("Erro na conexão. Verifique o servidor.");
+      alert("Erro na sincronização. Verifique se o servidor está ativo.");
       setIsFinished(false);
     } finally {
       setIsSending(false);
@@ -141,10 +142,10 @@ export default function RenalCanvas() {
   return (
     <div className="flex flex-col items-center gap-4 p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
       
-      {/* HUD Integrado (O seu componente que mostra os dados) */}
+      {/* HUD de Monitoramento - Z-index alto para ficar sobre o carregamento */}
       <TrainingHUD path={path} feedback={feedback} />
 
-      {/* Área do Simulador */}
+      {/* Container do Canvas */}
       <div className="relative bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-[0_0_60px_rgba(0,0,0,0.8)]">
         <canvas 
           ref={canvasRef} 
@@ -152,6 +153,7 @@ export default function RenalCanvas() {
           className="cursor-none active:scale-[1.001] transition-transform" 
         />
         
+        {/* Overlay de Sincronização */}
         {isSending && (
           <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center backdrop-blur-md z-[60]">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -162,7 +164,7 @@ export default function RenalCanvas() {
         )}
       </div>
       
-      {/* Botão de Finalizar */}
+      {/* Botão de Ação de Finalização */}
       <div className="w-full flex justify-end mt-4">
         <button
           onClick={handleFinish}
