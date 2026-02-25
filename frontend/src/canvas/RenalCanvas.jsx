@@ -2,18 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { apiService } from "../services/apiService";
 import { useTrainingSession } from "../contexts/TrainingSessionContext";
 import { createTargetZone } from "../simulator2d/targetZone.jsx";
+import TrainingHUD from "../components/hud/TrainingHUD"; // Importação do  HUD
 import rimImage from "../assets/ImagemRimPelveRenal.jpg";
 
 export default function RenalCanvas() {
   const canvasRef = useRef(null);
   const imageRef = useRef(null);
   const targetZoneRef = useRef(createTargetZone());
+  
+  // Estados do Simulador
   const [path, setPath] = useState([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [feedback, setFeedback] = useState(null); // Para guardar a resposta da IA
 
-  // 1. Setup Inicial e Carregamento
+  // 1. Setup Inicial e Carregamento da Imagem
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -29,8 +33,7 @@ export default function RenalCanvas() {
     };
   }, []);
 
-  // 2. Loop de Renderização Consolidado
-  // Usamos useEffect para reagir a mudanças, mas o render desenha tudo
+  // 2. Loop de Renderização (Reage a movimentos e novos pontos)
   useEffect(() => {
     render();
   }, [path, mousePos]); 
@@ -40,12 +43,14 @@ export default function RenalCanvas() {
     if (!canvas || !imageRef.current) return;
     const ctx = canvas.getContext("2d");
 
-    // A ordem aqui é vital: Fundo -> Alvo -> Rastro -> Ponteira
+    // Limpeza e Fundo
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageRef.current, 0, 0, canvas.width, canvas.height);
+    
+    // Desenha a zona alvo (onde o médico deve operar)
     targetZoneRef.current.draw(ctx);
 
-    // Desenha o Rastro Neon
+    // Desenha o Rastro Neon (limitado aos últimos 60 pontos para performance)
     const tail = path.slice(-60);
     tail.forEach((p, i) => {
       if (i === 0) return;
@@ -67,14 +72,13 @@ export default function RenalCanvas() {
       ctx.shadowBlur = 0;
     });
 
-    // DESENHO DA PONTEIRA (Sempre por último para ficar no topo)
+    // Desenha a ponteira (Mira Laser)
     const isNowInside = targetZoneRef.current.contains(mousePos.x, mousePos.y);
     drawLaserPointer(ctx, mousePos.x, mousePos.y, isNowInside);
   };
 
   const drawLaserPointer = (ctx, x, y, isInside) => {
     ctx.save();
-    // Brilho externo da ponta
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fillStyle = isInside ? "#4ade80" : "#f87171";
@@ -82,17 +86,14 @@ export default function RenalCanvas() {
     ctx.shadowColor = isInside ? "#4ade80" : "#f87171";
     ctx.fill();
     
-    // Crosshair (Mira branca de precisão)
     ctx.shadowBlur = 0;
     ctx.strokeStyle = "white";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    // Linhas da mira
     ctx.moveTo(x - 12, y); ctx.lineTo(x + 12, y);
     ctx.moveTo(x, y - 12); ctx.lineTo(x, y + 12);
     ctx.stroke();
 
-    // Círculo central da mira
     ctx.beginPath();
     ctx.arc(x, y, 3, 0, Math.PI * 2);
     ctx.stroke();
@@ -105,11 +106,10 @@ export default function RenalCanvas() {
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
 
-    // Atualiza a posição da ponteira em todos os movimentos
     setMousePos({ x, y }); 
 
     const last = path[path.length - 1];
-    // Grava o ponto para a telemetria apenas se houver movimento significativo
+    // Otimização: Só grava o ponto se mover mais de 3 pixels
     if (!last || Math.abs(x - last.x) > 3 || Math.abs(y - last.y) > 3) {
       setPath(prev => [...prev, { x, y, t: Date.now() }]);
     }
@@ -127,10 +127,11 @@ export default function RenalCanvas() {
     }));
 
     try {
-      const feedbackIA = await apiService.sendTelemetry(payload);
-      alert(`Sucesso! Feedback da IA: ${feedbackIA.mensagem || "Análise concluída"}`);
+      const response = await apiService.sendTelemetry(payload);
+      setFeedback(response); // Guarda o resultado (nota, pdf, etc)
+      alert(`Procedimento Finalizado! IA: ${response.mensagem || "Dados processados"}`);
     } catch (err) {
-      alert("Erro na conexão com o Java. Verifique se o servidor está ativo.");
+      alert("Erro na conexão. Verifique o servidor.");
       setIsFinished(false);
     } finally {
       setIsSending(false);
@@ -138,24 +139,11 @@ export default function RenalCanvas() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl">
+    <div className="flex flex-col items-center gap-4 p-6 bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
       
-      {/* HUD Superior */}
-      <div className="flex w-full justify-between items-end mb-2 px-2">
-        <div className="flex flex-col">
-          <h2 className="text-white font-black tracking-tighter text-2xl uppercase">
-            Justina <span className="text-blue-500">HUD v1.0.3</span>
-          </h2>
-          <p className="text-slate-500 text-[10px] uppercase font-mono tracking-[0.3em]">
-            Operador: <span className="text-blue-400">Cirurgião Acadêmico</span>
-          </p>
-        </div>
-        <div className="text-right">
-          <span className="text-slate-500 text-[9px] uppercase font-bold">Protocolo</span>
-          <div className="text-green-500 font-mono text-xs animate-pulse font-bold">TELEMETRIA ATIVA // FE-5</div>
-        </div>
-      </div>
-      
+      {/* HUD Integrado (O seu componente que mostra os dados) */}
+      <TrainingHUD path={path} feedback={feedback} />
+
       {/* Área do Simulador */}
       <div className="relative bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-[0_0_60px_rgba(0,0,0,0.8)]">
         <canvas 
@@ -165,44 +153,25 @@ export default function RenalCanvas() {
         />
         
         {isSending && (
-          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center backdrop-blur-md">
+          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center backdrop-blur-md z-[60]">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
             <div className="text-blue-400 font-black animate-pulse uppercase tracking-[0.4em] text-xs">
-              Sincronizando com a IA...
+              Sincronizando Telemetria...
             </div>
           </div>
         )}
       </div>
       
-      {/* HUD Inferior */}
-      <div className="w-full flex justify-between items-center px-4 py-3 bg-slate-800/30 rounded-2xl border border-slate-800/50">
-        <div className="flex gap-8">
-          <div className="flex flex-col">
-            <span className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">Data Points</span>
-            <div className="text-blue-400 font-mono text-xl font-black">
-              {path.length.toString().padStart(4, '0')}
-            </div>
-          </div>
-          <div className="flex flex-col justify-center">
-            <div className={`flex items-center gap-2 font-mono text-xs uppercase ${path.length > 0 ? 'text-green-500' : 'text-slate-600'}`}>
-              <div className={`w-2 h-2 rounded-full ${path.length > 0 ? 'bg-green-500 animate-ping' : 'bg-slate-600'}`}></div>
-              {path.length > 0 ? 'Capturando' : 'Standby'}
-            </div>
-          </div>
-        </div>
-
+      {/* Botão de Finalizar */}
+      <div className="w-full flex justify-end mt-4">
         <button
           onClick={handleFinish}
           disabled={isFinished || path.length === 0}
-          className="group relative px-12 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:translate-y-1"
+          className="px-12 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:translate-y-1 z-[70] pointer-events-auto"
         >
           {isSending ? "ENVIANDO..." : "Finalizar Procedimento"}
         </button>
       </div>
-      
-      <p className="text-[9px] text-slate-600 uppercase font-mono tracking-widest">
-        Sistema de Monitoramento Cirúrgico - Justina Project 2026
-      </p>
     </div>
   );
 }
