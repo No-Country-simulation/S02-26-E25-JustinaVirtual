@@ -1,10 +1,11 @@
-package br.com.justina.infrastructure.controller;
+package br.com.justina.infrastructure.controllers;
 
 import br.com.justina.application.dto.LoginRequest;
 import br.com.justina.application.dto.LoginResponse;
 import br.com.justina.application.dto.RegisterRequest;
 import br.com.justina.application.usecases.UsuarioService;
 import br.com.justina.domain.model.Usuario;
+import br.com.justina.infrastructure.security.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final TokenService tokenService;
 
     @Operation(summary = "Cadastra um novo médico", description = "Cria uma conta no sistema. O CRM deve ser único.")
     @PostMapping("/register")
@@ -34,8 +36,10 @@ public class UsuarioController {
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
         Usuario usuario = usuarioService.authenticate(request.email(), request.password());
 
+        String tokenReal = tokenService.gerarToken(usuario);
+
         return ResponseEntity.ok(new LoginResponse(
-                "MEU_TOKEN_DE_TESTE",
+                tokenReal,
                 usuario.getName(),
                 usuario.getEmail(),
                 usuario.getRole().name()
