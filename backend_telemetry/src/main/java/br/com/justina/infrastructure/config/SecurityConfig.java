@@ -1,5 +1,6 @@
-package br.com.justina.infrastructure.security;
+package br.com.justina.infrastructure.config;
 
+import br.com.justina.infrastructure.security.AuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
