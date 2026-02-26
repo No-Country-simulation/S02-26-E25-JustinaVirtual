@@ -1,29 +1,80 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import RenalCanvas from "../canvas/RenalCanvas";
+import { aiService } from "../services/apiService";
 
 export default function Simulator() {
   const [medico, setMedico] = useState("CIRURGIÃO");
   const [segundos, setSegundos] = useState(0);
+  
+  const [sessionId, setSessionId] = useState(null);
+  const [isCollecting, setIsCollecting] = useState(false);
+  const telemetryBuffer = useRef([]);
+  const telemetryInterval = useRef(null);
+  const isFinalized = useRef(false);
 
-  // 1. Busca o nome real do médico e garante CAIXA ALTA
   useEffect(() => {
     const dadosSalvos = localStorage.getItem("justina_user");
+    
     if (dadosSalvos) {
       const objetoMedico = JSON.parse(dadosSalvos);
-      // Se tiver nome, transforma em UPPERCASE, se não, vira CIRURGIÃO
       setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
+      iniciarColetaDeDados(objetoMedico.dni || "usuario_anonimo");
     }
+    
+    return () => {
+      if (telemetryInterval.current) {
+        clearInterval(telemetryInterval.current);
+      }
+    };
   }, []);
 
-  // 2. Cronômetro de Sessão (Tempo Real)
+  const iniciarColetaDeDados = async (userId) => {
+    try {
+      isFinalized.current = false;
+      
+      const response = await aiService.startDataCollection(
+        userId,
+        null,
+        "suture"
+      );
+      
+      setSessionId(response.session_id);
+      setIsCollecting(true);
+      
+      iniciarEnvioPeriodico(response.session_id);
+    } catch (error) {
+      console.error("Erro ao iniciar coleta IA:", error);
+    }
+  };
+
+  const iniciarEnvioPeriodico = (sessId) => {
+    telemetryInterval.current = setInterval(async () => {
+      if (telemetryBuffer.current.length > 0) {
+        const batch = [...telemetryBuffer.current];
+        telemetryBuffer.current = [];
+        await aiService.sendTelemetryBatch(sessId, batch);
+      }
+    }, 1000);
+  };
+
   useEffect(() => {
     const timer = setInterval(() => {
       setSegundos((prev) => prev + 1);
     }, 1000);
-    return () => clearInterval(timer); // Limpa o timer ao fechar o componente
+    return () => clearInterval(timer);
   }, []);
+    return () => {
+      // Limpar intervalo de telemetria
+      if (telemetryInterval.current) {
+        clearInterval(telemetryInterval.current);
+      }
+      
+      if (sessionId && isCollecting) {
+        aiService.completeDataCollection(sessionId, null, null).catch(console.error);
+      }
+    };
+  }, [sessionId, isCollecting]);
 
-  // Função auxiliar para formatar 00:00
   const formatarTempo = (s) => {
     const min = Math.floor(s / 60).toString().padStart(2, '0');
     const seg = (s % 60).toString().padStart(2, '0');
@@ -64,7 +115,44 @@ export default function Simulator() {
       
       {/* CONTAINER DO SIMULADOR (CANVAS) */}
       <div className="bg-black rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden relative group">
-        <RenalCanvas />
+        <RenalCanvas 
+          onPositionUpdate={(position) => {
+            if (isCollecting) {
+              telemetryBuffer.current.push({
+                timestamp: segundos,
+                position: position,
+                instrument_id: "main"
+              });
+            }
+          }}
+          onFinish={async () => {
+            if (sessionId && !isFinalized.current) {
+              isFinalized.current = true;
+              
+              try {
+                // envia o que sobrou no buffer antes de finalizar
+                if (telemetryBuffer.current.length > 0) {
+                  const batch = [...telemetryBuffer.current];
+                  await aiService.sendTelemetryBatch(sessionId, batch);
+                  telemetryBuffer.current = [];
+                }
+                
+                if (telemetryInterval.current) {
+                  clearInterval(telemetryInterval.current);
+                }
+                
+                await aiService.completeDataCollection(
+                  sessionId,
+                  null,
+                  null
+                );
+                setIsCollecting(false);
+              } catch (error) {
+                console.error("Erro ao finalizar coleta IA:", error);
+              }
+            }
+          }}
+        />
         
         {/* SCORE OVERLAY - TELEMETRIA EM TEMPO REAL */}
         <div className="absolute top-6 right-6 bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-right shadow-2xl">
