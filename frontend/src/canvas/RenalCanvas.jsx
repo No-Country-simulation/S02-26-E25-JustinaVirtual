@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { apiService } from "../services/apiService";
 
-export default function RenalCanvas() {
+export default function RenalCanvas({ onPositionUpdate, onFinish }) {
   const canvasRef = useRef(null);
   const [path, setPath] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // --- LÓGICA DE PERSISTÊNCIA ---
   useEffect(() => {
     const saved = localStorage.getItem("justina_draft_session");
     if (saved) {
@@ -22,7 +21,6 @@ export default function RenalCanvas() {
     }
   }, []);
 
-  // 1. Renderização do Ambiente Cirúrgico
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -60,36 +58,45 @@ export default function RenalCanvas() {
     drawScene();
   }, [path]);
 
-  // 2. Captura de Movimento com Auto-Save
   const handleMove = (e) => {
     if (isFinished) return;
-    if (!startTime) setStartTime(Date.now());
+    
+    // fix: garantir que startTime esteja definido antes
+    let currentStartTime = startTime;
+    if (!currentStartTime) {
+      currentStartTime = Date.now();
+      setStartTime(currentStartTime);
+    }
 
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
 
     const lastPoint = path[path.length - 1];
-    // Throttling: só salva se mover mais de 2px
+    // só adiciona se moveu mais de 2px (evita spam)
     if (!lastPoint || Math.abs(x - lastPoint.x) > 2 || Math.abs(y - lastPoint.y) > 2) {
       const newPath = [...path, { x, y, t: Date.now() }];
       setPath(newPath);
       
-      // Salva rascunho para resiliência hospitalar
       localStorage.setItem("justina_draft_session", JSON.stringify({
-        startTime: startTime || Date.now(),
+        startTime: currentStartTime,
         path: newPath
       }));
+      
+      if (onPositionUpdate) {
+        onPositionUpdate({
+          x: x,
+          y: y,
+          z: 0
+        });
+      }
     }
   };
 
-  // 3. Pausar e Sair (Para a Diretoria ver a rotina do médico)
   const handlePause = () => {
     alert("Simulação Pausada. Os dados estão seguros no navegador.");
-  
   };
 
-  // 4. Finalização Real com apiService
   const handleFinish = async () => {
     setIsFinished(true);
     setIsSending(true);
@@ -102,15 +109,22 @@ export default function RenalCanvas() {
       sessionStart: new Date(startTime).toISOString(),
       sessionEnd: new Date().toISOString(),
       pointsCount: path.length,
-      telemetry: path 
+      telemetry: path
     };
 
+    // tenta enviar pro backend java mas não quebra se não tiver
     try {
-      await apiService.sendTelemetry(payload); 
+      await apiService.sendTelemetry(payload);
+    } catch (error) {}
+    
+    try {
+      if (onFinish) {
+        await onFinish();
+      }
       localStorage.removeItem("justina_draft_session");
       setTimeout(() => setIsSending(false), 1000);
     } catch (error) {
-      alert("Erro ao enviar para o servidor. Tente novamente.");
+      console.error("Erro ao finalizar coleta IA:", error);
       setIsSending(false);
       setIsFinished(false);
     }
