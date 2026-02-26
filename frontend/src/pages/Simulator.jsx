@@ -12,21 +12,15 @@ export default function Simulator() {
   const telemetryInterval = useRef(null);
   const isFinalized = useRef(false);
 
-  useEffect(() => {
-    const dadosSalvos = localStorage.getItem("justina_user");
-    
-    if (dadosSalvos) {
-      const objetoMedico = JSON.parse(dadosSalvos);
-      setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
-      iniciarColetaDeDados(objetoMedico.dni || "usuario_anonimo");
-    }
-    
-    return () => {
-      if (telemetryInterval.current) {
-        clearInterval(telemetryInterval.current);
+  const iniciarEnvioPeriodico = (sessId) => {
+    telemetryInterval.current = setInterval(async () => {
+      if (telemetryBuffer.current.length > 0) {
+        const batch = [...telemetryBuffer.current];
+        telemetryBuffer.current = [];
+        await aiService.sendTelemetryBatch(sessId, batch);
       }
-    };
-  }, []);
+    }, 1000);
+  };
 
   const iniciarColetaDeDados = async (userId) => {
     try {
@@ -47,15 +41,21 @@ export default function Simulator() {
     }
   };
 
-  const iniciarEnvioPeriodico = (sessId) => {
-    telemetryInterval.current = setInterval(async () => {
-      if (telemetryBuffer.current.length > 0) {
-        const batch = [...telemetryBuffer.current];
-        telemetryBuffer.current = [];
-        await aiService.sendTelemetryBatch(sessId, batch);
+  useEffect(() => {
+    const dadosSalvos = localStorage.getItem("justina_user");
+    
+    if (dadosSalvos) {
+      const objetoMedico = JSON.parse(dadosSalvos);
+      setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
+      iniciarColetaDeDados(objetoMedico.dni || "usuario_anonimo");
+    }
+    
+    return () => {
+      if (telemetryInterval.current) {
+        clearInterval(telemetryInterval.current);
       }
-    }, 1000);
-  };
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,8 +63,9 @@ export default function Simulator() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
     return () => {
-      // Limpar intervalo de telemetria
       if (telemetryInterval.current) {
         clearInterval(telemetryInterval.current);
       }
