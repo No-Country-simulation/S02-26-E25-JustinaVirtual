@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import RenalCanvas from "../canvas/RenalCanvas";
+import { apiService } from "../services/apiService";
 
 export default function Simulator() {
   const [medico, setMedico] = useState("CIRURGIÃO");
   const [segundos, setSegundos] = useState(0);
+  const [sessionId, setSessionId] = useState(null);
+  
+  const telemetryBuffer = useRef([]);
+  const isFinalized = useRef(false);
 
   // 1. Busca o nome real do médico e garante CAIXA ALTA
   useEffect(() => {
     const dadosSalvos = localStorage.getItem("justina_user");
     if (dadosSalvos) {
       const objetoMedico = JSON.parse(dadosSalvos);
-      // Se tiver nome, transforma em UPPERCASE, se não, vira CIRURGIÃO
       setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
     }
   }, []);
@@ -20,8 +24,74 @@ export default function Simulator() {
     const timer = setInterval(() => {
       setSegundos((prev) => prev + 1);
     }, 1000);
-    return () => clearInterval(timer); // Limpa o timer ao fechar o componente
+    return () => clearInterval(timer);
   }, []);
+
+  // 3. Inicia coleta de dados de telemetria
+  useEffect(() => {
+    const iniciarColeta = async () => {
+      try {
+        const dadosSalvos = localStorage.getItem("justina_user");
+        if (dadosSalvos) {
+          const user = JSON.parse(dadosSalvos);
+          const response = await apiService.startDataCollection(user.email);
+          setSessionId(response.session_id);
+        }
+      } catch (error) {
+        console.error("Erro ao iniciar coleta:", error);
+      }
+    };
+    iniciarColeta();
+  }, []);
+
+  // 4. Envia dados em lote periodicamente (a cada 5 segundos)
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const interval = setInterval(async () => {
+      if (telemetryBuffer.current.length > 0) {
+        try {
+          await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+          telemetryBuffer.current = [];
+        } catch (error) {
+          console.error("Erro ao enviar lote:", error);
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Callback para receber posições do canvas
+  const handlePositionUpdate = (position) => {
+    if (!sessionId || isFinalized.current) return;
+    telemetryBuffer.current.push({
+      x: position.x,
+      y: position.y,
+      z: position.z || 0,
+      timestamp: Date.now()
+    });
+  };
+
+  // Callback para finalizar sessão
+  const handleFinishSession = async () => {
+    if (!sessionId || isFinalized.current) return;
+    
+    isFinalized.current = true;
+    
+    try {
+      // Envia dados restantes no buffer
+      if (telemetryBuffer.current.length > 0) {
+        await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+        telemetryBuffer.current = [];
+      }
+      
+      // Completa a sessão
+      await apiService.completeDataCollection(sessionId);
+    } catch (error) {
+      console.error("Erro ao finalizar sessão:", error);
+    }
+  };
 
   // Função auxiliar para formatar 00:00
   const formatarTempo = (s) => {
@@ -64,7 +134,10 @@ export default function Simulator() {
       
       {/* CONTAINER DO SIMULADOR (CANVAS) */}
       <div className="bg-black rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden relative group">
-        <RenalCanvas />
+        <RenalCanvas 
+          onPositionUpdate={handlePositionUpdate}
+          onFinish={handleFinishSession}
+        />
         
         {/* SCORE OVERLAY - TELEMETRIA EM TEMPO REAL */}
         <div className="absolute top-6 right-6 bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-right shadow-2xl">

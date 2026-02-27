@@ -3,16 +3,15 @@ from pydantic import BaseModel
 from typing import List, Optional
 import random
 import os
+import logging
 import matplotlib.pyplot as plt
 from fpdf import FPDF
-import logging
 
-
-# Configuração de Logs
+# --- CONFIGURAÇÃO (Híbrida) ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("justina-ai")
 
-# Criação de pastas
+# Cria a pasta para salvar os PDFs se não existir
 os.makedirs("relatorios_gerados", exist_ok=True)
 
 app = FastAPI(title="Justina AI Service", version="1.0.0")
@@ -29,7 +28,7 @@ class FeedbackIADTO(BaseModel):
     mensagem: str
     precisao: float
 
-# --- FUNÇÕES AUXILIARES ---
+# --- FUNÇÃO AUXILIAR: GERAR PDF (Sua Feature) ---
 def criar_pdf_relatorio(sessao_id):
     pdf = FPDF()
     pdf.add_page()
@@ -59,10 +58,10 @@ def criar_pdf_relatorio(sessao_id):
 
 @app.post("/analisar", response_model=FeedbackIADTO)
 def analisar_movimentos(movimentos: List[TelemetriaDTO]):
-    # Log da equipe
-    logger.info(f"Recebidos {len(movimentos)} pontos de telemetria.")
+    # Log da equipe + Lógica simples
+    count = len(movimentos)
+    logger.info(f"Recebidos {count} registros para processamento.")
     
-    # Lógica simples (pode ser evoluída depois)
     score = random.uniform(0.7, 1.0)
     
     if score > 0.85:

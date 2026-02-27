@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiService } from "../services/apiService";
 
-export default function RenalCanvas() {
+export default function RenalCanvas({ onPositionUpdate, onFinish }) {
   const canvasRef = useRef(null);
   const [path, setPath] = useState([]);
   const [startTime, setStartTime] = useState(null);
@@ -75,6 +75,11 @@ export default function RenalCanvas() {
       const newPath = [...path, { x, y, t: Date.now() }];
       setPath(newPath);
       
+      // Notifica parent (Simulator) para enviar pra IA
+      if (onPositionUpdate) {
+        onPositionUpdate({ x, y, z: 0 });
+      }
+      
       // Salva rascunho para resiliência hospitalar
       localStorage.setItem("justina_draft_session", JSON.stringify({
         startTime: startTime || Date.now(),
@@ -106,13 +111,31 @@ export default function RenalCanvas() {
     };
 
     try {
-      await apiService.sendTelemetry(payload); 
-      localStorage.removeItem("justina_draft_session");
+      // Enviar para Python IA (coleta de dados) - PRIORITÁRIO
+      if (onFinish) {
+        await onFinish();
+      }
+      
+      // Enviar para Java (persistência) - OPCIONAL
+      try {
+        await apiService.sendTelemetry(payload); 
+        localStorage.removeItem("justina_draft_session");
+      } catch (javaError) {
+        console.warn("⚠️ Backend Java indisponível (porta 8081), apenas dados IA salvos");
+      }
+      
       setTimeout(() => setIsSending(false), 1000);
     } catch (error) {
-      alert("Erro ao enviar para o servidor. Tente novamente.");
-      setIsSending(false);
-      setIsFinished(false);
+      console.error("Erro ao enviar:", error);
+      // Mesmo se Java falhar, tenta enviar pra IA
+      if (onFinish) {
+        try {
+          await onFinish();
+        } catch (iaError) {
+          console.error("Erro na IA:", iaError);
+        }
+      }
+      setTimeout(() => setIsSending(false), 1000);
     }
   };
 
