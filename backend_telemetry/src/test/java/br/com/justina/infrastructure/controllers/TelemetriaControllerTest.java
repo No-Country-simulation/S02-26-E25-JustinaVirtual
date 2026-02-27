@@ -32,20 +32,28 @@ class TelemetriaControllerTest {
 
     @Test
     void deveRetornarFeedbackQuandoReceberMovimentosValidos() {
+        // Arrange
         UUID usuarioId = UUID.randomUUID();
-        List<Telemetria> movimentos = Collections.singletonList(new Telemetria());
-        
+        Telemetria t = new Telemetria();
+        List<Telemetria> movimentos = Collections.singletonList(t);
+
         AnaliseRequest request = new AnaliseRequest();
         request.setUsuarioId(usuarioId);
         request.setMovimentos(movimentos);
 
-        FeedbackIA feedbackEsperado = new FeedbackIA("APROVADO", "Bom", 0.9);
+        // Ajustado para usar o construtor ou apenas os setters que existem
+        FeedbackIA feedbackEsperado = new FeedbackIA();
+        feedbackEsperado.setStatus("APROVADO");
+        feedbackEsperado.setMensagem("Movimento preciso");
 
         when(registrarMovimentoUseCase.executar(eq(usuarioId), any())).thenReturn(feedbackEsperado);
 
-        ResponseEntity<FeedbackIA> response = controller.receberMovimentos(request);
+        // Act
+        ResponseEntity<?> response = controller.receberMovimentos(request);
 
+        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("APROVADO", response.getBody().getStatus());
+        FeedbackIA corpoResposta = (FeedbackIA) response.getBody();
+        assertEquals("APROVADO", corpoResposta.getStatus());
     }
 }

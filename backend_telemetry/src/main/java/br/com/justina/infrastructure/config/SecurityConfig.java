@@ -50,11 +50,10 @@ public class SecurityConfig {
                                 "/api/error",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
+                                "/swagger-ui.html")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                // .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .build();
     }
@@ -66,8 +65,7 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                "https://s02-26-e25-justina-virtual.vercel.app"
-        ));
+                "https://s02-26-e25-justina-virtual.vercel.app"));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));

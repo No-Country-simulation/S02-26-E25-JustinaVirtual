@@ -37,4 +37,11 @@ public class Cirurgia {
     @OneToMany(mappedBy = "cirurgia", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SessaoSimulacao> sessoes = new ArrayList<>();
+
+    private Long tempoEstimadoSegundos; // Qual o tempo ideal da cirurgia?
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "tb_cirurgia_zonas_proibidas", joinColumns = @JoinColumn(name = "cirurgia_id"))
+    @Builder.Default
+    private List<ZonaProibida> zonasProibidas = new ArrayList<>();
 }
