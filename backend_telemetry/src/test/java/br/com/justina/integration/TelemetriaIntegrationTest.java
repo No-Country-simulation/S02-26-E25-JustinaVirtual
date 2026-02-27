@@ -2,7 +2,6 @@ package br.com.justina.integration;
 
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
-import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import br.com.justina.infrastructure.dto.TelemetriaDTO;
 import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
 import br.com.justina.domain.model.Usuario;
@@ -18,7 +17,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 

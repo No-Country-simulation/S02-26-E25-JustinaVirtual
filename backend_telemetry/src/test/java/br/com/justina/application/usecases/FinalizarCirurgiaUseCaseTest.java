@@ -3,7 +3,6 @@ package br.com.justina.application.usecases;
 import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
-import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
