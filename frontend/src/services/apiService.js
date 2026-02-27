@@ -1,4 +1,5 @@
 const API_BASE_URL = "http://localhost:8081/api";
+const AI_BASE_URL = "http://localhost:8000";
 
 export const apiService = {
   // 1. Envio de Telemetria
@@ -54,120 +55,72 @@ export const apiService = {
       console.error("❌ Erro Relatório Diretoria:", error.message);
       throw error;
     }
-  }
-};
+  },
 
-// ========================================
-// API DE IA - COLETA DE DADOS
-// ========================================
-
-const AI_API_BASE_URL = import.meta.env.VITE_AI_API_URL || "http://localhost:8000";
-
-export const aiService = {
-  // Iniciar sessão de coleta
-  startDataCollection: async (userId, skillLevel = null, procedureType = "suture") => {
+  // 4. AI Service - Inicia coleta de dados
+  startDataCollection: async (userId) => {
     try {
-      const response = await fetch(`${AI_API_BASE_URL}/sessions/start`, {
+      const response = await fetch(`${AI_BASE_URL}/sessions/start`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
           user_id: userId,
-          skill_level: skillLevel,
-          procedure_type: procedureType
-        }),
+          procedure_type: "renal_surgery"
+        })
       });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao iniciar coleta: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Sessão de coleta IA iniciada:", data.session_id);
-      return data;
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      return await response.json();
     } catch (error) {
-      console.error("Erro em startDataCollection:", error);
+      console.error("❌ Erro ao iniciar coleta:", error.message);
       throw error;
     }
   },
 
-  // Enviar batch de telemetria
+  // 5. AI Service - Envia lote de telemetria
   sendTelemetryBatch: async (sessionId, telemetryPoints) => {
-    if (!sessionId || !telemetryPoints || telemetryPoints.length === 0) {
-      console.warn("Tentativa de envio sem dados");
-      return { success: false };
-    }
-
     try {
-      const response = await fetch(
-        `${AI_API_BASE_URL}/sessions/${sessionId}/telemetry`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(telemetryPoints),
-        }
-      );
+      const formattedPoints = telemetryPoints.map(point => ({
+        timestamp: point.timestamp / 1000,
+        position: {
+          x: point.x,
+          y: point.y,
+          z: point.z
+        },
+        instrument_id: "surgical_tool"
+      }));
 
-      if (!response.ok) {
-        throw new Error(`Erro ao enviar telemetria: ${response.status}`);
-      }
-
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/telemetry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formattedPoints)
+      });
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
       return await response.json();
     } catch (error) {
-      console.error("Erro em sendTelemetryBatch:", error);
-      // Não lança erro para não interromper simulação
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Finalizar sessão de coleta
-  completeDataCollection: async (sessionId, userFeedback = null, difficultyRating = null) => {
-    try {
-      const response = await fetch(
-        `${AI_API_BASE_URL}/sessions/${sessionId}/complete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({
-            session_id: sessionId,
-            user_feedback: userFeedback,
-            difficulty_rating: difficultyRating
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Erro ao finalizar coleta: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Sessão IA finalizada e salva:", data.saved_to);
-      return data;
-    } catch (error) {
-      console.error("Erro em completeDataCollection:", error);
+      console.error("❌ Erro ao enviar lote:", error.message);
       throw error;
     }
   },
 
-  // Obter estatísticas do dataset
-  getDatasetStats: async () => {
+  // 6. AI Service - Completa sessão
+  completeDataCollection: async (sessionId) => {
     try {
-      const response = await fetch(`${AI_API_BASE_URL}/dataset/stats`);
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_feedback: "Sessão concluída via simulador",
+          difficulty_rating: 3
+        })
+      });
       if (!response.ok) {
-        throw new Error(`Erro ao buscar stats: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Erro ${response.status}: ${JSON.stringify(errorData)}`);
       }
       return await response.json();
     } catch (error) {
-      console.error("Erro em getDatasetStats:", error);
-      return { total_sessions: 0, message: "Erro ao carregar" };
+      console.error("❌ Erro ao completar coleta:", error.message);
+      throw error;
     }
   }
 };

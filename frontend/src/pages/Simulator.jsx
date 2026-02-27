@@ -1,62 +1,25 @@
 import { useEffect, useState, useRef } from "react";
 import RenalCanvas from "../canvas/RenalCanvas";
-import { aiService } from "../services/apiService";
+import { apiService } from "../services/apiService";
 
 export default function Simulator() {
   const [medico, setMedico] = useState("CIRURGIÃO");
   const [segundos, setSegundos] = useState(0);
-  
   const [sessionId, setSessionId] = useState(null);
-  const [isCollecting, setIsCollecting] = useState(false);
+  
   const telemetryBuffer = useRef([]);
-  const telemetryInterval = useRef(null);
   const isFinalized = useRef(false);
 
-  const iniciarEnvioPeriodico = (sessId) => {
-    telemetryInterval.current = setInterval(async () => {
-      if (telemetryBuffer.current.length > 0) {
-        const batch = [...telemetryBuffer.current];
-        telemetryBuffer.current = [];
-        await aiService.sendTelemetryBatch(sessId, batch);
-      }
-    }, 1000);
-  };
-
-  const iniciarColetaDeDados = async (userId) => {
-    try {
-      isFinalized.current = false;
-      
-      const response = await aiService.startDataCollection(
-        userId,
-        null,
-        "suture"
-      );
-      
-      setSessionId(response.session_id);
-      setIsCollecting(true);
-      
-      iniciarEnvioPeriodico(response.session_id);
-    } catch (error) {
-      console.error("Erro ao iniciar coleta IA:", error);
-    }
-  };
-
+  // 1. Busca o nome real do médico e garante CAIXA ALTA
   useEffect(() => {
     const dadosSalvos = localStorage.getItem("justina_user");
-    
     if (dadosSalvos) {
       const objetoMedico = JSON.parse(dadosSalvos);
       setMedico(objetoMedico.name ? objetoMedico.name.toUpperCase() : "CIRURGIÃO");
-      iniciarColetaDeDados(objetoMedico.dni || "usuario_anonimo");
     }
-    
-    return () => {
-      if (telemetryInterval.current) {
-        clearInterval(telemetryInterval.current);
-      }
-    };
   }, []);
 
+  // 2. Cronômetro de Sessão (Tempo Real)
   useEffect(() => {
     const timer = setInterval(() => {
       setSegundos((prev) => prev + 1);
@@ -64,18 +27,73 @@ export default function Simulator() {
     return () => clearInterval(timer);
   }, []);
 
+  // 3. Inicia coleta de dados de telemetria
   useEffect(() => {
-    return () => {
-      if (telemetryInterval.current) {
-        clearInterval(telemetryInterval.current);
-      }
-      
-      if (sessionId && isCollecting) {
-        aiService.completeDataCollection(sessionId, null, null).catch(console.error);
+    const iniciarColeta = async () => {
+      try {
+        const dadosSalvos = localStorage.getItem("justina_user");
+        if (dadosSalvos) {
+          const user = JSON.parse(dadosSalvos);
+          const response = await apiService.startDataCollection(user.email);
+          setSessionId(response.session_id);
+        }
+      } catch (error) {
+        console.error("Erro ao iniciar coleta:", error);
       }
     };
-  }, [sessionId, isCollecting]);
+    iniciarColeta();
+  }, []);
 
+  // 4. Envia dados em lote periodicamente (a cada 5 segundos)
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const interval = setInterval(async () => {
+      if (telemetryBuffer.current.length > 0) {
+        try {
+          await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+          telemetryBuffer.current = [];
+        } catch (error) {
+          console.error("Erro ao enviar lote:", error);
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Callback para receber posições do canvas
+  const handlePositionUpdate = (position) => {
+    if (!sessionId || isFinalized.current) return;
+    telemetryBuffer.current.push({
+      x: position.x,
+      y: position.y,
+      z: position.z || 0,
+      timestamp: Date.now()
+    });
+  };
+
+  // Callback para finalizar sessão
+  const handleFinishSession = async () => {
+    if (!sessionId || isFinalized.current) return;
+    
+    isFinalized.current = true;
+    
+    try {
+      // Envia dados restantes no buffer
+      if (telemetryBuffer.current.length > 0) {
+        await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+        telemetryBuffer.current = [];
+      }
+      
+      // Completa a sessão
+      await apiService.completeDataCollection(sessionId);
+    } catch (error) {
+      console.error("Erro ao finalizar sessão:", error);
+    }
+  };
+
+  // Função auxiliar para formatar 00:00
   const formatarTempo = (s) => {
     const min = Math.floor(s / 60).toString().padStart(2, '0');
     const seg = (s % 60).toString().padStart(2, '0');
@@ -117,42 +135,8 @@ export default function Simulator() {
       {/* CONTAINER DO SIMULADOR (CANVAS) */}
       <div className="bg-black rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden relative group">
         <RenalCanvas 
-          onPositionUpdate={(position) => {
-            if (isCollecting) {
-              telemetryBuffer.current.push({
-                timestamp: segundos,
-                position: position,
-                instrument_id: "main"
-              });
-            }
-          }}
-          onFinish={async () => {
-            if (sessionId && !isFinalized.current) {
-              isFinalized.current = true;
-              
-              try {
-                // envia o que sobrou no buffer antes de finalizar
-                if (telemetryBuffer.current.length > 0) {
-                  const batch = [...telemetryBuffer.current];
-                  await aiService.sendTelemetryBatch(sessionId, batch);
-                  telemetryBuffer.current = [];
-                }
-                
-                if (telemetryInterval.current) {
-                  clearInterval(telemetryInterval.current);
-                }
-                
-                await aiService.completeDataCollection(
-                  sessionId,
-                  null,
-                  null
-                );
-                setIsCollecting(false);
-              } catch (error) {
-                console.error("Erro ao finalizar coleta IA:", error);
-              }
-            }
-          }}
+          onPositionUpdate={handlePositionUpdate}
+          onFinish={handleFinishSession}
         />
         
         {/* SCORE OVERLAY - TELEMETRIA EM TEMPO REAL */}
