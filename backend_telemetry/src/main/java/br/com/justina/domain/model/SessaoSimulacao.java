@@ -24,6 +24,11 @@ public class SessaoSimulacao {
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
     private Usuario usuario;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "cirurgia_id", nullable = false)
+    @NotNull(message = "Toda sessão deve estar vinculada a um procedimento cirúrgico.")
+    private Cirurgia cirurgia;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataInicio;
 
@@ -67,7 +72,8 @@ public class SessaoSimulacao {
     }
 
     public double getPercentualAcertos() {
-        if (totalErros == null || totalErros == 0) return 100.0;
+        if (totalErros == null || totalErros == 0)
+            return 100.0;
         return Math.max(0, 100.0 - (totalErros * 5));
     }
 }

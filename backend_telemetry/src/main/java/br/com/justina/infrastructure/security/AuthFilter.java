@@ -1,12 +1,12 @@
 package br.com.justina.infrastructure.security;
 
+import br.com.justina.infrastructure.security.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,24 +27,23 @@ public class AuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String token = recuperarToken(request);
-        System.out.println("TOKEN RECEBIDO: " + token);
 
         if (token != null) {
-            String subject = tokenService.getSubject(token);
-            String role = tokenService.getRole(token);
-
-            if (subject != null && role != null) {
-                try {
-                    UUID userId = UUID.fromString(subject);
-
-                    var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
-
-                    var authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                } catch (IllegalArgumentException e) {
-                    logger.error("Token contém um UUID inválido: " + subject);
-                }
+            try {
+                // Extrai o UUID do token para o contexto de segurança (Lógica central da Task 4)
+                UUID userId = tokenService.getUsuarioId(token);
+                
+                var auth = new UsernamePasswordAuthenticationToken(
+                        userId, 
+                        null, 
+                        Collections.emptyList());
+                
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Token inválido ou expirado\"}");
+                return;
             }
         }
 
@@ -62,10 +61,12 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
+        // Liberação de rotas públicas e documentação (Consolidado da Task 4 e dev)
         return path.startsWith("/usuarios/login")
                 || path.startsWith("/usuarios/register")
                 || path.startsWith("/h2-console")
                 || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs");
+                || path.startsWith("/v3/api-docs")
+                || path.equals("/swagger-ui.html");
     }
 }

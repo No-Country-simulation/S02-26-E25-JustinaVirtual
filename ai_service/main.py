@@ -1,28 +1,23 @@
-<<<<<<< HEAD
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from typing import List, Optional
 import random
 import os
+import logging
 import matplotlib.pyplot as plt
 from fpdf import FPDF
-=======
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-from typing import List
-import logging
->>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf
 
+# --- Configuração de Logs e App ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("justina-ai")
 
-<<<<<<< HEAD
 # Cria a pasta para salvar os PDFs se não existir
 os.makedirs("relatorios_gerados", exist_ok=True)
-=======
-app = FastAPI(title="Justina AI Service", version="1.0.0")
->>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf
 
+app = FastAPI(title="Justina AI Service", version="1.0.0")
+
+
+# --- Endpoint 1: Análise de Telemetria (Tempo Real) ---
 @app.post("/analisar")
 async def analisar_movimentos(request: Request):
     try:
@@ -40,17 +35,36 @@ async def analisar_movimentos(request: Request):
             z = float(telemetria.get("eixoZ", 0.0))
             session_id = telemetria.get("sessionId", "N/A")
 
-<<<<<<< HEAD
-# --- Endpoint 1: Análise em Tempo Real ---
-@app.post("/analisar", response_model=FeedbackIADTO)
-def analisar_movimentos(movimentos: List[TelemetriaDTO]):
-    print(f" PYTHON: Recebi {len(movimentos)} pontos.")
-    score = random.uniform(0.7, 1.0)
-    return {
-        "status": "APROVADO" if score > 0.85 else "ALERTA",
-        "mensagem": "Movimento analisado com sucesso.",
-        "precisao": round(score, 4)
-    }
+            # Cálculo de score (Lógica de Negócio)
+            soma_eixos = abs(x) + abs(y) + abs(z)
+            # Normalização: estabilidade perfeita = 1.0
+            score = 1.0 - min(0.5, soma_eixos / 100.0) if soma_eixos > 0 else 1.0
+            
+            logger.info(f"Sessão: {session_id} | Score: {score:.4f} | Eixos: X={x}, Y={y}, Z={z}")
+        else:
+            score = 0.0
+            logger.warning("Lote de telemetria vazio recebido.")
+
+        # Determinação do status e recomendações profissionais
+        is_stable = score > 0.7
+        
+        return {
+            "status": "APROVADO" if is_stable else "ATENÇÃO",
+            "mensagem": "Processamento de telemetria realizado com sucesso",
+            "precisao": round(score, 4),
+            "recomendacao": "Condições de movimento dentro dos parâmetros normais" if is_stable 
+                            else "Alerta: Instabilidade detectada acima do limite de segurança"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no processamento: {str(e)}")
+        return {
+            "status": "ERRO",
+            "mensagem": f"Falha interna no motor de análise: {str(e)}",
+            "precisao": 0.0,
+            "recomendacao": "Reinicie a coleta de dados"
+        }
+
 
 # --- FUNÇÃO AUXILIAR: GERAR PDF ---
 def criar_pdf_relatorio(sessao_id):
@@ -84,49 +98,19 @@ def criar_pdf_relatorio(sessao_id):
     pdf.output(nome_pdf)
     return nome_pdf
 
+
 # --- Endpoint 2: Relatório Final ---
 @app.post("/relatorio/{sessao_id}")
 def gerar_relatorio_final(sessao_id: str):
-    print(f"🤖 IA: Gerando PDF para a sessão {sessao_id}...")
+    logger.info(f"Gerando PDF para a sessão {sessao_id}...")
     
     try:
         caminho_arquivo = criar_pdf_relatorio(sessao_id)
-        print(f"📄 PDF salvo em: {caminho_arquivo}")
+        logger.info(f"PDF salvo em: {caminho_arquivo}")
         return {
             "status": "RELATORIO_CRIADO",
             "mensagem": f"PDF gerado com sucesso: {caminho_arquivo}"
         }
     except Exception as e:
-        print(f"Erro ao gerar PDF: {e}")
+        logger.error(f"Erro ao gerar PDF: {e}")
         return {"status": "ERRO", "mensagem": str(e)}
-=======
-            # Cálculo de score (Lógica de Negócio)
-            soma_eixos = abs(x) + abs(y) + abs(z)
-            # Normalização: estabilidade perfeita = 1.0
-            score = 1.0 - min(0.5, soma_eixos / 100.0) if soma_eixos > 0 else 1.0
-            
-            logger.info(f"Sessão: {session_id} | Score: {score:.4f} | Eixos: X={x}, Y={y}, Z={z}")
-        else:
-            score = 0.0
-            logger.warning("Lote de telemetria vazio recebido.")
-
-        # Determinação do status e recomendações profissionais
-        is_stable = score > 0.7
-        
-        return {
-            "status": "APROVADO" if is_stable else "ATENÇÃO",
-            "mensagem": "Processamento de telemetria realizado com sucesso",
-            "precisao": round(score, 4),
-            "recomendacao": "Condições de movimento dentro dos parâmetros normais" if is_stable 
-                            else "Alerta: Instabilidade detectada acima do limite de segurança"
-        }
-
-    except Exception as e:
-        logger.error(f"Erro no processamento: {str(e)}")
-        return {
-            "status": "ERRO",
-            "mensagem": f"Falha interna no motor de análise: {str(e)}",
-            "precisao": 0.0,
-            "recomendacao": "Reinicie a coleta de dados"
-        }
->>>>>>> ad8d829a72e16f3d231eed0eb84062dbc78a4eaf
