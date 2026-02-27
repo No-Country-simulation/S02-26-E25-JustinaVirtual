@@ -51,8 +51,11 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
+                        .requestMatchers("/api/telemetria/**").hasAnyAuthority("TRAINEE", "ROLE_TRAINEE", "ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/usuarios/me").authenticated()
+
                         .requestMatchers(HttpMethod.POST, "/api/questoes/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )

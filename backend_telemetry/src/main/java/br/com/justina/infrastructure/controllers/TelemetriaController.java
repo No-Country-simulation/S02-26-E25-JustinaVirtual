@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/telemetria")
+@RequestMapping("/telemetria")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Telemetria", description = "Gerenciamento de movimentos e sessões cirúrgicas simuladas")
