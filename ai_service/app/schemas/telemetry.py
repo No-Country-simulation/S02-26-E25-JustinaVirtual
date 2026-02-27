@@ -50,7 +50,6 @@ class SessionStartRequest(BaseModel):
 
 class SessionCompleteRequest(BaseModel):
     """Finalizar sessão e salvar dados"""
-    session_id: str
     user_feedback: Optional[str] = None
     difficulty_rating: Optional[int] = Field(None, ge=1, le=5)
 
