@@ -19,12 +19,10 @@ public class ListarHistoricoUseCase {
     private final UsuarioRepository usuarioRepository;
 
     public List<SessaoResponse> executar() {
-        String emailLogado = SecurityContextHolder.getContext().getAuthentication().getName();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        java.util.UUID userId = (java.util.UUID) auth.getPrincipal();
 
-        Usuario usuario = usuarioRepository.findByEmail(emailLogado)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
-        return sessaoRepository.findByUsuarioIdOrderByDataInicioDesc(usuario.getId())
+        return sessaoRepository.findByUsuarioIdOrderByDataInicioDesc(userId)
                 .stream()
                 .map(sessao -> new SessaoResponse(
                         sessao.getId(),
