@@ -42,15 +42,14 @@ public class UsuarioController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
         Usuario usuario = usuarioService.authenticate(request.email(), request.password());
-        
-        // Substituído o token de teste pelo token real (Lógica de dev integrada)
         String tokenReal = tokenService.gerarToken(usuario);
 
         return ResponseEntity.ok(new LoginResponse(
                 tokenReal,
                 usuario.getName(),
                 usuario.getEmail(),
-                usuario.getRole().name()));
+                usuario.getRole().name()
+        ));
     }
 
     @Operation(summary = "Obtém o perfil do usuário logado", description = "Retorna os dados do usuário a partir do Token JWT.")

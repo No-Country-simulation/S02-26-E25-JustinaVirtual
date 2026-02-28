@@ -25,7 +25,6 @@ public class AbrirSessaoUseCase {
 
     @Transactional
     public SessaoResponse executar() {
-        // Obtendo a autenticação do contexto (Task 4)
         var auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth == null || !(auth.getPrincipal() instanceof UUID)) {
@@ -41,7 +40,6 @@ public class AbrirSessaoUseCase {
                     return new RuntimeException("Erro: Usuário do token não existe no banco.");
                 });
 
-        // Lógica da Task 4: Impedir mais de uma sessão ativa simultânea
         boolean jaPossuiSessaoAtiva = sessaoRepository.existsByUsuarioAndStatus(usuario, StatusSessao.EM_ANDAMENTO);
 
         if (jaPossuiSessaoAtiva) {
@@ -56,7 +54,7 @@ public class AbrirSessaoUseCase {
                 .build();
 
         SessaoSimulacao salva = sessaoRepository.save(novaSessao);
-        log.info("Nova sessão de simulação aberta com sucesso para o usuário: {}", userId);
+        log.info("Nova sessão de simulação aberta para o usuário: {}", userId);
 
         return new SessaoResponse(
                 salva.getId(),

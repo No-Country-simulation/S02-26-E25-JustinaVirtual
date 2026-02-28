@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   db:
@@ -48,11 +49,11 @@ services:
 
   # Frontend (React ou Streamlit)
   simulator_frontend:
-    build: ./frontend
+    build: ./simulator_frontend
     container_name: justina_frontend
     restart: on-failure
     ports:
-      - "3000:80" # Se for React
+      - "3000:3000" # Se for React
       # - "8501:8501" # Se optar por Streamlit, altere a porta
     environment:
       - REACT_APP_API_URL=http://localhost:8081
