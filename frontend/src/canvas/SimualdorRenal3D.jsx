@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useNavigate } from "react-router-dom";
+import { apiService } from "../services/apiService";
 
 export default function SimuladorRenal3D() {
   const mountRef = useRef(null);
@@ -20,6 +21,11 @@ export default function SimuladorRenal3D() {
   const [errors, setErrors] = useState(0);
   const [hits, setHits] = useState(0);
   const [sessionLog, setSessionLog] = useState([]);
+
+  // Estados de sessão
+  const [sessionId, setSessionId] = useState(null);
+  const telemetryBuffer = useRef([]);
+  const isFinalized = useRef(false);
 
   // Refs de lógica
   const staplerRef = useRef(0);
@@ -42,6 +48,41 @@ export default function SimuladorRenal3D() {
     ureter: { color: 0xeeee00, emissive: 0x333300 },
   };
 
+  // Inicia coleta de dados ao montar
+  useEffect(() => {
+    const iniciarColeta = async () => {
+      try {
+        const dadosSalvos = localStorage.getItem("justina_user");
+        if (dadosSalvos) {
+          const user = JSON.parse(dadosSalvos);
+          const response = await apiService.startDataCollection(user.email, "renal_surgery_3d");
+          setSessionId(response.session_id);
+        }
+      } catch (error) {
+        console.error("Erro ao iniciar coleta:", error);
+      }
+    };
+    iniciarColeta();
+  }, []);
+
+  // Envia dados em lote periodicamente
+  useEffect(() => {
+    if (!sessionId || isFinalized.current) return;
+
+    const interval = setInterval(async () => {
+      if (telemetryBuffer.current.length > 0) {
+        try {
+          await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+          telemetryBuffer.current = [];
+        } catch (error) {
+          console.error("Erro ao enviar lote:", error);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
   const recordEvent = (type, description, status) => {
     const event = {
       timestamp: new Date().toISOString(),
@@ -60,6 +101,17 @@ export default function SimuladorRenal3D() {
       setErrors(errorsRef.current);
     }
     setSessionLog([...logRef.current]);
+
+    // Registra evento para análise
+    const telemetryPoint = {
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      z: Math.random() * 10,
+      timestamp: Date.now(),
+      event_type: type,
+      event_status: status
+    };
+    telemetryBuffer.current.push(telemetryPoint);
   };
 
   const calculateAccuracy = () => {
@@ -67,7 +119,10 @@ export default function SimuladorRenal3D() {
     return totalActions === 0 ? 0 : Math.round((hitsRef.current / totalActions) * 100);
   };
 
-  const handleFinalizar = () => {
+  const handleFinalizar = async () => {
+    if (isFinalized.current) return;
+    isFinalized.current = true;
+
     const dadosCirurgia = {
       session_id: Date.now(),
       user_id: "current_user_id",
@@ -87,6 +142,23 @@ export default function SimuladorRenal3D() {
 
     const historico = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
     localStorage.setItem("historico_cirurgias", JSON.stringify([dadosCirurgia, ...historico]));
+
+    // Finaliza coleta de dados
+    if (sessionId) {
+      try {
+        // Envia dados restantes no buffer
+        if (telemetryBuffer.current.length > 0) {
+          await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);
+          telemetryBuffer.current = [];
+        }
+
+        // Completa a sessão
+        await apiService.completeDataCollection(sessionId);
+      } catch (error) {
+        console.error("Erro ao finalizar sessao:", error);
+      }
+    }
+
     navigate("/dashboard");
   };
 

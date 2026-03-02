@@ -34,7 +34,7 @@ export default function Simulator() {
         const dadosSalvos = localStorage.getItem("justina_user");
         if (dadosSalvos) {
           const user = JSON.parse(dadosSalvos);
-          const response = await apiService.startDataCollection(user.email);
+          const response = await apiService.startDataCollection(user.email, "renal_surgery_2d");
           setSessionId(response.session_id);
         }
       } catch (error) {
@@ -44,7 +44,7 @@ export default function Simulator() {
     iniciarColeta();
   }, []);
 
-  // 4. Envia dados em lote periodicamente (a cada 5 segundos)
+  // 4. Envia dados em lote periodicamente
   useEffect(() => {
     if (!sessionId) return;
 
