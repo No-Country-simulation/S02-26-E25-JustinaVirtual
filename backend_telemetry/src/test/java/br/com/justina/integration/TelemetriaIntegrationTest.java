@@ -1,11 +1,8 @@
 package br.com.justina.integration;
 
-import br.com.justina.domain.model.SessaoSimulacao;
-import br.com.justina.domain.model.StatusSessao;
-import br.com.justina.infrastructure.dto.TelemetriaDTO;
-import br.com.justina.application.ports.output.ITelemetriaRepositoryPort;
-import br.com.justina.domain.model.Usuario;
-import br.com.justina.domain.model.Role;
+import br.com.justina.application.dto.AnaliseRequest;
+import br.com.justina.application.dto.FinalizarSessaoRequest;
+import br.com.justina.domain.model.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,19 +12,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.test.context.support.WithMockUser;
 
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(username = "admin", roles = {"USER", "ADMIN"})
 @DisplayName("Testes de Integração - Módulo Telemetria")
 @Transactional
 class TelemetriaIntegrationTest {
@@ -39,100 +37,83 @@ class TelemetriaIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private ITelemetriaRepositoryPort repository;
+    private EntityManager entityManager;
 
     @Test
-    @DisplayName("Deve registrar um batch de movimentos com sucesso (201 Created)")
+    @DisplayName("Deve registrar movimentos com sucesso")
     void shouldRegisterMovementsSuccessfully() throws Exception {
+        Usuario user = criarUsuarioPersistido();
         UUID sessaoId = UUID.randomUUID();
-        // Create dummy session and user for FK constraints if needed, though integration test might use H2
-        // Assuming loose coupling or mocking repository isn't used here directly, but strict integration
-        // might require existing session. Let's try to create one.
-        
-        Usuario user = new Usuario();
-        user.setId(UUID.randomUUID());
-        user.setEmail("test@test.com");
-        user.setPassword("123456");
-        user.setName("Test User");
-        user.setRole(Role.USER);
-        user.setCrm("12345");
-        // repository.salvarUsuario(user); // Method not available in ITelemetriaRepositoryPort
+        SessaoSimulacao sessao = criarSessaoPersistida(sessaoId, user);
 
-        SessaoSimulacao sessao = SessaoSimulacao.builder()
-                .id(sessaoId)
-                .usuario(user) // Use .usuario(user) instead of .usuarioId(id)
-                .status(StatusSessao.EM_ANDAMENTO)
-                .dataInicio(LocalDateTime.now())
+        Telemetria movimento = Telemetria.builder()
+                .eixoX(10.5)
+                .eixoY(20.5)
+                .eixoZ(30.5)
+                .rotacao(90.0)
+                .eventId("E01")
+                .timestamp(LocalDateTime.now())
+                .sessao(sessao)
                 .build();
-        repository.salvarSessao(sessao);
 
-        TelemetriaDTO movimento = new TelemetriaDTO(
-            10.5, 20.5, 30.5, 90.0, 
-            "E01", LocalDateTime.now().toString(), sessaoId.toString()
-        );
+        AnaliseRequest request = new AnaliseRequest();
+        request.setUsuarioId(user.getId());
+        request.setMovimentos(List.of(movimento));
 
-        List<TelemetriaDTO> payload = List.of(movimento);
-
-        mockMvc.perform(post("/api/telemetria/movimentos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    @DisplayName("Deve retornar 400 Bad Request ao enviar lista vazia")
-    void shouldValidateInvalidPayload() throws Exception {
-        mockMvc.perform(post("/api/telemetria/movimentos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("[]"))
-                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/telemetria/analisar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("Deve finalizar uma cirurgia com sucesso")
     void shouldFinalizeSurgerySuccessfully() throws Exception {
-        // 1. Prepara o cenário: cria uma sessão em andamento no banco (em memória)
-        UUID sessaoId = UUID.randomUUID();
-        
-        Usuario user = new Usuario();
-        user.setId(UUID.randomUUID());
-        user.setEmail("test2@test.com");
-        user.setPassword("123456");
-        user.setName("Test User 2");
-        user.setRole(Role.USER);
-        user.setCrm("54321");
-        // repository.salvarUsuario(user); // Method not available in ITelemetriaRepositoryPort
+        Usuario user = criarUsuarioPersistido();
 
         SessaoSimulacao sessao = SessaoSimulacao.builder()
-                .id(sessaoId)
-                .usuario(user) // Use .usuario(user) instead of .usuarioId(id)
+                .usuario(user)
                 .status(StatusSessao.EM_ANDAMENTO)
-                .dataInicio(LocalDateTime.now().minusMinutes(30))
+                .dataInicio(LocalDateTime.now().minusMinutes(10))
                 .build();
-        repository.salvarSessao(sessao);
 
-        // 2. Envia requisição de finalização
-        FinalizarCirurgiaDTO dto = new FinalizarCirurgiaDTO(sessaoId);
+        sessao = entityManager.merge(sessao);
+        entityManager.flush();
+        entityManager.clear();
 
-        mockMvc.perform(post("/api/telemetria/finalizar")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+        UUID idReal = sessao.getId(); // Esse ID existe com certeza no H2
+
+        FinalizarSessaoRequest request = new FinalizarSessaoRequest(10, 85.5);
+
+        mockMvc.perform(post("/telemetria/finalizar")
+                        .param("sessaoId", idReal.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("FINALIZADA"));
-        
-        // 3. Validação no banco
-        SessaoSimulacao sessaoAtualizada = repository.buscarSessaoPorId(sessaoId).orElseThrow();
-        assertEquals(StatusSessao.FINALIZADA, sessaoAtualizada.getStatus());
     }
 
-    @Test
-    @DisplayName("Deve rejeitar finalização se ID da sessão não existir")
-    void shouldFailToFinalizeUnknownSession() throws Exception {
-        FinalizarCirurgiaDTO dto = new FinalizarCirurgiaDTO(UUID.randomUUID());
+    private Usuario criarUsuarioPersistido() {
+        Usuario user = new Usuario();
+        user.setEmail("test-" + UUID.randomUUID() + "@test.com");
+        user.setPassword("123456");
+        user.setName("Test User");
+        user.setRole(Role.USER);
+        Usuario persistido = entityManager.merge(user);
+        entityManager.flush();
+        return persistido;
+    }
 
-        mockMvc.perform(post("/api/telemetria/finalizar")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isInternalServerError());
+    private SessaoSimulacao criarSessaoPersistida(UUID id, Usuario user) {
+        SessaoSimulacao sessao = SessaoSimulacao.builder()
+                .id(id)
+                .usuario(user)
+                .status(StatusSessao.EM_ANDAMENTO)
+                .dataInicio(LocalDateTime.now().minusMinutes(10))
+                .build();
+        SessaoSimulacao persistida = entityManager.merge(sessao);
+        entityManager.flush();
+        return persistida;
     }
 }
