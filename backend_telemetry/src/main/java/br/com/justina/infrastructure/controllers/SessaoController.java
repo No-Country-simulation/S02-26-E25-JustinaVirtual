@@ -34,15 +34,6 @@ public class SessaoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Finaliza uma sessão ativa", description = "Calcula o tempo total, salva erros e pontuação, mudando o status para FINALIZADA.")
-    @PatchMapping("/{id}/finalizar")
-    public ResponseEntity<SessaoResponse> finalizar(
-            @PathVariable UUID id,
-            @RequestBody @Valid FinalizarSessaoRequest request
-    ) {
-        return ResponseEntity.ok(finalizarSessaoUseCase.executar(id, request));
-    }
-
     @Operation(summary = "Histórico de sessões", description = "Retorna todas as sessões do usuário logado, da mais recente para a mais antiga.")
     @GetMapping("/historico")
     public ResponseEntity<List<SessaoResponse>> obterHistorico() {
