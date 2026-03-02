@@ -42,21 +42,17 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/usuarios/login",
                                 "/usuarios/register",
-                                "/auth/**",
-                                "/api/auth/**",
                                 "/h2-console/**",
-                                "/error",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/error"
                         ).permitAll()
 
-                        .requestMatchers("/api/telemetria/**").hasAnyAuthority("TRAINEE", "ROLE_TRAINEE", "ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/telemetria/**").authenticated()
+                        .requestMatchers("/sessoes/**").authenticated()
                         .requestMatchers("/usuarios/me").authenticated()
-
-                        .requestMatchers(HttpMethod.POST, "/api/questoes/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
-
+                        .requestMatchers(HttpMethod.GET, "/usuarios").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
