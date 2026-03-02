@@ -23,8 +23,8 @@ public class AuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
         String token = recuperarToken(request);
         System.out.println("TOKEN RECEBIDO: " + token);
@@ -64,6 +64,8 @@ public class AuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         return path.startsWith("/usuarios/login")
                 || path.startsWith("/usuarios/register")
+                || path.startsWith("/telemetria")
+                || path.startsWith("/api/telemetria")
                 || path.startsWith("/h2-console")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");

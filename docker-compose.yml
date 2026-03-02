@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
@@ -25,11 +23,12 @@ services:
     ports:
       - "8081:8081"
     environment:
-    - SPRING_PROFILES_ACTIVE=prod
-    - DB_URL=jdbc:postgresql://db:5432/justina_db
-    - DB_USER=user_justina
-    - DB_PASSWORD=password_justina
-    - AI_SERVICE_URL=http://ai-service:8000
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_URL=jdbc:postgresql://db:5432/justina_db
+      - DB_USER=user_justina
+      - DB_PASSWORD=password_justina
+      - AI_SERVICE_URL=http://ai-service:8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY} 
     networks:
       - justina_network
 
@@ -47,20 +46,22 @@ services:
     networks:
       - justina_network
 
-  # Frontend (React ou Streamlit)
-  simulator_frontend:
-    build: ./simulator_frontend
+ 
+  frontend:
+    build: ./frontend  
     container_name: justina_frontend
     restart: on-failure
     ports:
-      - "3000:3000" # Se for React
-      # - "8501:8501" # Se optar por Streamlit, altere a porta
+      - "3000:3000"
     environment:
       - REACT_APP_API_URL=http://localhost:8081
     depends_on:
       - backend_telemetry
     networks:
       - justina_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 networks:
   justina_network:
