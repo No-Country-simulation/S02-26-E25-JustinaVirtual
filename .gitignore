@@ -1,0 +1,30 @@
+# Java/Maven
+target/
+*.class
+*.jar
+.mvn/
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+venv/
+.pytest_cache/
+
+# Node/React
+node_modules/
+build/
+.pnp
+.pnp.js
+
+# Docker & OS
+.env
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+*.iml

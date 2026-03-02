@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: justina_db
+    restart: always
+    environment:
+      POSTGRES_DB: justina_db
+      POSTGRES_USER: user_justina
+      POSTGRES_PASSWORD: password_justina
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - justina_network
+
+  backend_telemetry:
+    build: ./backend_telemetry
+    container_name: justina_backend
+    restart: on-failure
+    depends_on:
+      - db
+    ports:
+      - "8081:8081"
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - DB_URL=jdbc:postgresql://db:5432/justina_db
+    - DB_USER=user_justina
+    - DB_PASSWORD=password_justina
+    - AI_SERVICE_URL=http://ai-service:8000
+    networks:
+      - justina_network
+
+  # IA Service (Python + FastAPI + PyTorch)
+  ai-service:
+    build: ./ai_service
+    container_name: justina_ai
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai_service:/app
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - justina_network
+
+  # Frontend (React ou Streamlit)
+  simulator_frontend:
+    build: ./simulator_frontend
+    container_name: justina_frontend
+    restart: on-failure
+    ports:
+      - "3000:3000" # Se for React
+      # - "8501:8501" # Se optar por Streamlit, altere a porta
+    environment:
+      - REACT_APP_API_URL=http://localhost:8081
+    depends_on:
+      - backend_telemetry
+    networks:
+      - justina_network
+
+networks:
+  justina_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
