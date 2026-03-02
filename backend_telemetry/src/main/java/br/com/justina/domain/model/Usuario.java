@@ -39,7 +39,7 @@ public class Usuario {
 
     @NotNull(message = "O papel do usuário é obrigatório")
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private Role role = Role.TRAINEE;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -47,8 +47,10 @@ public class Usuario {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.role == null) {
+            this.role = Role.TRAINEE;
+        }
     }
-
     public Usuario(String name, String email, String password, Role role) {
         this.name = name;
         this.email = email;

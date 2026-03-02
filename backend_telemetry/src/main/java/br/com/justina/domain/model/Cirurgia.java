@@ -38,10 +38,12 @@ public class Cirurgia {
     @Builder.Default
     private List<SessaoSimulacao> sessoes = new ArrayList<>();
 
-    private Long tempoEstimadoSegundos; // Qual o tempo ideal da cirurgia?
+    @Column(name = "tempo_estimado_segundos")
+    private Integer tempoEstimadoSegundos;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection
     @CollectionTable(name = "tb_cirurgia_zonas_proibidas", joinColumns = @JoinColumn(name = "cirurgia_id"))
+    @Column(name = "zona")
     @Builder.Default
-    private List<ZonaProibida> zonasProibidas = new ArrayList<>();
+    private List<String> zonasProibidas = new ArrayList<>();
 }

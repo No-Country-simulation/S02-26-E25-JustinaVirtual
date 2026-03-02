@@ -1,15 +1,16 @@
 const API_BASE_URL = "http://localhost:8081/api";
 
 export const apiService = {
+  // 1. Envio de Telemetria (Reconstrução Task 8)
   sendTelemetry: async (payload) => {
     if (!payload || !payload.telemetry || payload.telemetry.length === 0) {
-      console.warn("⚠️ Tentativa de envio sem dados.");
+      console.warn("⚠️ Tentativa de envio sem dados de telemetria.");
       return { success: false, message: "Nenhum movimento capturado." };
     }
 
-    // --- TRADUÇÃO PARA O FORMATO QUE O JAVA E A IA ESPERAM ---
+    // --- TRADUÇÃO PARA O FORMATO QUE O MOTOR JAVA ESPERA ---
     const user = JSON.parse(localStorage.getItem("justina_user") || "{}");
-    const usuarioId = user.id || "11111111-1111-1111-1111-111111111111"; // UUID Provisório
+    const usuarioId = user.id || "11111111-1111-1111-1111-111111111111";
 
     const javaPayload = {
       usuarioId: usuarioId,
@@ -24,12 +25,13 @@ export const apiService = {
     };
 
     try {
-      // CORREÇÃO DA ROTA: telemetria/analisar
+      // Enviamos para a rota de análise que processa as colisões e pontuação
       const response = await fetch(`${API_BASE_URL}/telemetria/analisar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Mantido por compatibilidade com a branch dev
         },
         body: JSON.stringify(javaPayload),
       });
@@ -41,19 +43,21 @@ export const apiService = {
         );
       }
 
-      return await response.json(); // Aqui o React finalmente receberá o 200 OK
+      return await response.json();
     } catch (error) {
       console.error("🚨 Erro na Telemetria:", error.message);
       throw error;
     }
   },
 
+  // 2. Histórico do Médico
   getHistory: async (dni) => {
     if (!dni) throw new Error("DNI é obrigatório.");
     const response = await fetch(`${API_BASE_URL}/v1/medicos/${dni}/historico`);
     return await response.json();
   },
 
+  // 3. Relatório para a Diretoria
   getDirectorReport: async () => {
     const response = await fetch(
       `${API_BASE_URL}/v1/diretoria/relatorio-geral`,

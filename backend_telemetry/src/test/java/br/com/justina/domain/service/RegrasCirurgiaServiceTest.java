@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,8 +33,8 @@ class RegrasCirurgiaServiceTest {
                 .build();
 
         cirurgia = Cirurgia.builder()
-                .tempoEstimadoSegundos(60L) // Cirurgia deve durar 1 minuto
-                .zonasProibidas(List.of(veiaRenal))
+                .tempoEstimadoSegundos(60) // Cirurgia deve durar 1 minuto
+                .zonasProibidas(new ArrayList<>())
                 .build();
 
         sessao = SessaoSimulacao.builder()

@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,9 +21,10 @@ public class ObterEvolucaoUseCase {
     private final UsuarioRepository usuarioRepository;
 
     public List<SessaoResponse> executar() {
-        String emailLogado = SecurityContextHolder.getContext().getAuthentication().getName();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) auth.getPrincipal();
 
-        Usuario usuario = usuarioRepository.findByEmail(emailLogado)
+        Usuario usuario = usuarioRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         return sessaoRepository.findAllByUsuarioAndStatusOrderByDataInicioAsc(usuario, StatusSessao.FINALIZADA)
@@ -34,6 +37,6 @@ public class ObterEvolucaoUseCase {
                         sessao.getTotalErros(),
                         sessao.getTempoTotalSegundos()
                 ))
-                .toList();
+                .collect(Collectors.toList());
     }
 }

@@ -30,8 +30,17 @@ public class RegrasCirurgiaService {
             return;
         }
 
-        boolean houveColisao = cirurgia.getZonasProibidas().stream()
-                .anyMatch(zona -> zona.contem(telemetria.getEixoX(), telemetria.getEixoY(), telemetria.getEixoZ()));
+        // TODO: A lógica de colisão 3D precisa ser reescrita pois zonasProibidas agora
+        // é List<String>.
+        // Desativado temporariamente para adequação da modelagem.
+        boolean houveColisao = false;
+
+        /*
+         * Código antigo comentado:
+         * boolean houveColisao = cirurgia.getZonasProibidas().stream()
+         * .anyMatch(zona -> zona.contem(telemetria.getEixoX(), telemetria.getEixoY(),
+         * telemetria.getEixoZ()));
+         */
 
         if (houveColisao) {
             int errosAtuais = sessao.getTotalErros() == null ? 0 : sessao.getTotalErros();

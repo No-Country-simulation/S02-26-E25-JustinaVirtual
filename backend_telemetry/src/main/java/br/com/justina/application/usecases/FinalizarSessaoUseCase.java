@@ -20,34 +20,40 @@ import java.util.UUID;
 public class FinalizarSessaoUseCase {
 
     private final SessaoSimulacaoRepository sessaoRepository;
+    private final GeminiService geminiService;
 
     @Transactional
     public SessaoResponse executar(UUID sessaoId, FinalizarSessaoRequest request) {
-        // 1. Busca a sessão
         SessaoSimulacao sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada com o ID: " + sessaoId));
 
-        // 2. Verifica se já não está finalizada
         if (sessao.isFinalizada()) {
             throw new IllegalStateException("Esta sessão já foi finalizada anteriormente.");
         }
 
-        // 3. Define a data de fim e status
         sessao.setDataFim(LocalDateTime.now());
         sessao.setStatus(StatusSessao.FINALIZADA);
-
-        // Persistindo métricas consolidadas vindas do request
         sessao.setTotalErros(request.totalErros());
         sessao.setPontuacaoGeral(request.pontuacaoGeral());
 
-        // 4. Calcula o tempo total em segundos
         long segundos = Duration.between(sessao.getDataInicio(), sessao.getDataFim()).getSeconds();
         sessao.setTempoTotalSegundos(segundos);
 
-        // 5. Salva as alterações
-        SessaoSimulacao salva = sessaoRepository.save(sessao);
+        //  Integração com a IA
+        try {
+            log.info("Solicitando feedback da IA para a sessão: {}", sessaoId);
+            String feedbackTexto = geminiService.gerarFeedback(sessao.getTotalErros(), sessao.getPontuacaoGeral());
 
-        log.info("Sessão {} finalizada. Duração: {} segundos.", salva.getId(), segundos);
+            sessao.setStatusIa(feedbackTexto);
+            sessao.setPrecisaoIa(sessao.getPercentualAcertos());
+
+        } catch (Exception e) {
+            log.error("Falha ao obter feedback da IA: {}", e.getMessage());
+            sessao.setStatusIa("Feedback indisponível no momento.");
+        }
+
+        SessaoSimulacao salva = sessaoRepository.save(sessao);
+        log.info("Sessão {} finalizada com sucesso.", salva.getId());
 
         return new SessaoResponse(
                 salva.getId(),

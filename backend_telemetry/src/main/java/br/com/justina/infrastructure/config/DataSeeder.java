@@ -35,8 +35,8 @@ public class DataSeeder implements CommandLineRunner {
                     .nomeProcedimento("Nefrectomia Parcial (Simulação Base)")
                     .nivelDificuldade("TREINAMENTO")
                     .dataCriacao(LocalDateTime.now())
-                    .tempoEstimadoSegundos(120L) // 2 minutos para terminar
-                    .zonasProibidas(List.of(zonaPerigosa))
+                    .tempoEstimadoSegundos(120) // 2 minutos para terminar
+                    .zonasProibidas(List.of("Coração", "Pulmão"))
                     .build();
 
             cirurgiaRepository.save(cirurgia);

@@ -1,7 +1,0 @@
-{
-  "name": "justina-frontend-placeholder",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "mkdir -p build && echo 'Frontend Placeholder' > build/index.html"
-  }
-}
