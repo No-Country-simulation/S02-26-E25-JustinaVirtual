@@ -1,9 +1,10 @@
 package br.com.justina.application.services;
 
-import br.com.justina.domain.exception.RegraCirurgiaException;
 import br.com.justina.domain.model.Cirurgia;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
+import br.com.justina.infrastructure.exception.RegraCirurgiaException;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;

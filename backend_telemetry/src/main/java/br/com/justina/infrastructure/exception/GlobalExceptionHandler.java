@@ -1,6 +1,5 @@
 package br.com.justina.infrastructure.exception;
 
-import br.com.justina.domain.exception.RegraCirurgiaException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
