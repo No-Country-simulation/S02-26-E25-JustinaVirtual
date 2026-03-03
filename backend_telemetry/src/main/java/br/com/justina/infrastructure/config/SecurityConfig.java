@@ -25,55 +25,59 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-        private final AuthFilter authFilter;
+    private final AuthFilter authFilter;
 
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                return http
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .csrf(AbstractHttpConfigurer::disable)
-                                .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                                .authorizeHttpRequests(auth -> auth
-                                                // 1. Liberação do Pre-flight (CORS) - OBRIGATÓRIO
-                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // 1. Liberação de Pre-flight (CORS)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                                                // 2. Rotas de Telemetria (sem o prefixo /api, pois o Spring já está
-                                                // dentro dele)
-                                                .requestMatchers("/telemetria/**").permitAll()
-                                                .requestMatchers("/api/telemetria/**").permitAll()
+                        // 2. Login e Registro são públicos
+                        .requestMatchers("/usuarios/login", "/usuarios/register").permitAll()
 
-                                                // 3. Login e Registro
-                                                .requestMatchers("/usuarios/login", "/usuarios/register").permitAll()
+                        // 3. Documentação e Banco H2 são públicos para os Devs
+                        .requestMatchers("/h2-console/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                                                // 4. H2 e Swagger
-                                                .requestMatchers("/h2-console/**", "/v3/api-docs/**", "/swagger-ui/**",
-                                                                "/swagger-ui.html")
-                                                .permitAll()
+                        // 4. Rotas que EXIGEM Logado
+                        .requestMatchers("/telemetria/**").authenticated()
+                        .requestMatchers("/sessoes/**").authenticated()
+                        .requestMatchers("/usuarios/me").authenticated()
 
-                                                .anyRequest().authenticated())
-                                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
-                                .build();
-        }
+                        // 5. Rotas exclusivas de ADMIN
+                        .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
+                        .requestMatchers("/diretoria/**").hasRole("ADMIN")
 
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration configuration = new CorsConfiguration();
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+                .build();
+    }
 
-                configuration.setAllowedOrigins(Arrays.asList(
-                                "http://localhost:3000",
-                                "https://s02-26-e25-justina-virtual.vercel.app"));
-
-                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-                configuration.setAllowCredentials(true);
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", configuration);
-                return source;
-        }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://s02-26-e25-justina-virtual.vercel.app"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
