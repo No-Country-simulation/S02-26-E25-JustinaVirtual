@@ -25,7 +25,5 @@ services:
           property: connectionString
       - key: RENDER
         value: true
-      - key: PYTHON_VERSION
-        value: "3.11"
     autoDeploy: true
 
