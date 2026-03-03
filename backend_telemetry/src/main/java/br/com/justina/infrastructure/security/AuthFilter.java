@@ -64,8 +64,6 @@ public class AuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         return path.startsWith("/usuarios/login")
                 || path.startsWith("/usuarios/register")
-                || path.startsWith("/telemetria")
-                || path.startsWith("/api/telemetria")
                 || path.startsWith("/h2-console")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");
