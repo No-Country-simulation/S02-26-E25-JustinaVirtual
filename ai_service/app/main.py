@@ -19,7 +19,7 @@ from app.services.prediction_service import get_prediction_service
 
 # Database (PostgreSQL no Render)
 try:
-    from app.database import IS_PRODUCTION, init_database, get_all_sessions
+    from app.database import IS_PRODUCTION, init_database, get_all_sessions, get_sessions_by_user
 except ImportError:
     IS_PRODUCTION = False
     init_database = lambda: None
@@ -184,6 +184,99 @@ async def get_active_sessions():
     return {
         "active_sessions": active,
         "count": len(active)
+    }
+
+
+@app.get("/sessions/user/{user_id}")
+async def get_user_sessions(user_id: str):
+    """
+    Busca sessões de um usuário específico
+    
+    Retorna análise completa incluindo predição da IA quando disponível
+    """
+    if IS_PRODUCTION:
+        # Busca do PostgreSQL
+        sessions = get_sessions_by_user(user_id)
+    else:
+        # Busca dos arquivos JSON locais
+        import glob
+        session_files = glob.glob(str(data_collector.data_dir / "*.json"))
+        sessions = []
+        
+        for filepath in session_files:
+            try:
+                with open(filepath, 'r') as f:
+                    session_data = json.load(f)
+                    if session_data.get("user_id") == user_id:
+                        sessions.append({
+                            "session_id": session_data.get("session_id"),
+                            "user_id": session_data.get("user_id"),
+                            "procedure_type": session_data.get("procedure_type"),
+                            "session_data": session_data,
+                            "created_at": session_data.get("start_time")
+                        })
+            except Exception as e:
+                print(f"Erro ao ler {filepath}: {e}")
+                continue
+        
+        # Ordena por data (mais recente primeiro)
+        sessions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    # Processa cada sessão e adiciona análise da IA
+    results = []
+    for session in sessions:
+        session_data = session.get("session_data", {})
+        
+        # Calcula métricas básicas
+        economy = session_data.get("economy_of_motion", 0)
+        smoothness = session_data.get("smoothness_score", 0)
+        avg_velocity = session_data.get("avg_velocity", 0)
+        
+        # Tentar predição com o modelo LSTM (se houver dados suficientes)
+        predicted_skill = None
+        telemetry = session_data.get("telemetry_data", [])
+        
+        if len(telemetry) >= 10 and predictor:
+            try:
+                points = [TelemetryPoint(**p) for p in telemetry]
+                prediction = predictor.predict_quality(points)
+                predicted_skill = prediction.get("skill_level")
+            except Exception as e:
+                print(f"Erro na predição para {session['session_id']}: {e}")
+        
+        # Determina status baseado nas métricas
+        status = "Completed"
+        if predicted_skill:
+            status = f"Skill Level: {predicted_skill}"
+        elif smoothness > 0.02:
+            status = "Needs Improvement"
+        elif economy > 1000:
+            status = "Check Efficiency"
+        else:
+            status = "Good Performance"
+        
+        results.append({
+            "session_id": session["session_id"],
+            "date": session.get("created_at", "")[:10] if session.get("created_at") else "N/A",
+            "procedure_type": session["procedure_type"],
+            "mode": "3D Surgery" if "3d" in session["procedure_type"].lower() else "2D Simulator",
+            "score": f"{int(max(0, min(100, (1 - smoothness * 10) * 100)))}%",
+            "status": status,
+            "metrics": {
+                "economy_of_motion": round(economy, 2),
+                "smoothness_score": round(smoothness, 4),
+                "avg_velocity": round(avg_velocity, 2)
+            },
+            "ai_prediction": {
+                "skill_level": predicted_skill,
+                "confidence": None  # Pode adicionar confidence do modelo depois
+            }
+        })
+    
+    return {
+        "user_id": user_id,
+        "total_sessions": len(results),
+        "sessions": results
     }
 
 

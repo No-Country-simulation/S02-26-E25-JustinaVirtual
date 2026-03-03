@@ -94,6 +94,24 @@ if IS_PRODUCTION and DATABASE_URL:
         
         return [dict(row) for row in sessions]
     
+    def get_sessions_by_user(user_id: str) -> List[Dict]:
+        """Busca sessões de um usuário específico"""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT session_id, user_id, procedure_type, session_data, created_at
+            FROM sessions
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+        """, (user_id,))
+        
+        sessions = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return [dict(row) for row in sessions]
+    
     def get_session_count() -> int:
         """Conta total de sessões no banco"""
         conn = get_db_connection()
@@ -118,6 +136,10 @@ else:
         pass
     
     def get_all_sessions() -> List[Dict]:
+        """No modo local, retorna lista vazia (usa arquivos JSON)"""
+        return []
+    
+    def get_sessions_by_user(user_id: str) -> List[Dict]:
         """No modo local, retorna lista vazia (usa arquivos JSON)"""
         return []
     

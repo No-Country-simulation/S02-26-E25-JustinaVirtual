@@ -101,6 +101,23 @@ export const apiService = {
       console.error("❌ Erro ao listar usuários:", error.message);
       throw error;
     }
+  },
+
+  // 5. Buscar sessões do usuário com análise da IA
+  getUserSessions: async (userId) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/user/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("[IA] Erro ao buscar sessões:", error);
+      return { user_id: userId, total_sessions: 0, sessions: [] };
+    }
   }
 };
 

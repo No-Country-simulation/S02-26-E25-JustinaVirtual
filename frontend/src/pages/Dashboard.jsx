@@ -1,26 +1,61 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { apiService } from "../services/apiService";
 import Button from "../components/ui/Button";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [previousResults, setPreviousResults] = useState([
-    { id: 1, date: "2026-02-01", mode: "Training", score: "85%", status: "Approved" },
-    { id: 2, date: "2026-01-28", mode: "Simulator", score: "72%", status: "Needs Improvement" },
-  ]);
+  const [previousResults, setPreviousResults] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const salvos = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
-
-    setPreviousResults(prev => {
-      const idsFixos = [1, 2];
-      const novosFiltrados = salvos.filter(s => !idsFixos.includes(s.id));
-      return [...novosFiltrados, ...prev];
-    });
-  }, []);
+    async function loadUserSessions() {
+      if (!user) return;
+      
+      setLoading(true);
+      
+      try {
+        // Busca sessões da IA (3D e 2D)
+        const aiSessions = await apiService.getUserSessions(user.email);
+        
+        // Busca histórico local (sessões antigas)
+        const localHistory = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
+        
+        // Combina resultados
+        const aiResults = aiSessions.sessions || [];
+        const combined = [...aiResults, ...localHistory];
+        
+        // Remove duplicatas por session_id
+        const unique = combined.reduce((acc, item) => {
+          if (!acc.find(x => x.session_id === item.session_id || x.id === item.id)) {
+            acc.push(item);
+          }
+          return acc;
+        }, []);
+        
+        // Ordena por data (mais recente primeiro)
+        unique.sort((a, b) => {
+          const dateA = a.date || a.timestamp || "";
+          const dateB = b.date || b.timestamp || "";
+          return dateB.localeCompare(dateA);
+        });
+        
+        setPreviousResults(unique);
+      } catch (error) {
+        console.error("Erro ao carregar sessões:", error);
+        // Fallback para dados locais
+        const localHistory = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
+        setPreviousResults(localHistory);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadUserSessions();
+  }, [user]);
 
   function handleLogout() {
     logout();
@@ -107,41 +142,88 @@ export default function Dashboard() {
 
         {/* PREVIOUS RESULTS */}
         <div className="bg-card p-6 rounded-xl shadow-sm">
-          <h2 className="text-xl font-semibold mb-6">Previous Results</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Previous Results</h2>
+            {!loading && previousResults.length > 0 && (
+              <span className="text-sm text-muted">
+                {previousResults.length} session{previousResults.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
 
-          {previousResults.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-muted mt-2">Loading sessions...</p>
+            </div>
+          ) : previousResults.length === 0 ? (
             <p className="text-muted">No previous results found.</p>
           ) : (
             <div className="space-y-4">
-              {previousResults.map((result) => (
-                <div
-                  key={result.id}
-                  className={`flex justify-between items-center border p-4 rounded-lg ${
-                    result.mode === "3D Surgery"
-                      ? "border-green-500/30 bg-green-50/5"
-                      : "border-border"
-                  }`}
-                >
-                  <div>
-                    <p className="font-medium">{result.mode}</p>
-                    <p className="text-sm text-muted">{result.date}</p>
-                  </div>
+              {previousResults.map((result, index) => {
+                const isAI = result.session_id && result.ai_prediction;
+                const is3D = result.mode === "3D Surgery" || result.procedure_type?.includes("3d");
+                
+                return (
+                  <div
+                    key={result.session_id || result.id || index}
+                    className={`flex justify-between items-center border p-4 rounded-lg ${
+                      is3D
+                        ? "border-green-500/30 bg-green-50/5"
+                        : "border-border"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{result.mode || result.procedure_type || "Unknown"}</p>
+                        {isAI && (
+                          <span className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                            AI Analysis
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted">{result.date || "N/A"}</p>
+                      
+                      {/* Métricas da IA */}
+                      {result.metrics && (
+                        <div className="mt-2 flex gap-3 text-xs text-muted">
+                          <span title="Economy of Motion">
+                            📏 {result.metrics.economy_of_motion}
+                          </span>
+                          <span title="Smoothness Score">
+                            🎯 {result.metrics.smoothness_score}
+                          </span>
+                          <span title="Average Velocity">
+                            ⚡ {result.metrics.avg_velocity}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="text-right">
-                    <p className="font-semibold">{result.score}</p>
-                    <p
-                      className={`text-sm ${
-                        result.status === "Approved" ||
-                        result.status === "Session Completed"
-                          ? "text-green-600"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {result.status}
-                    </p>
+                    <div className="text-right">
+                      <p className="font-semibold">{result.score}</p>
+                      <p
+                        className={`text-sm ${
+                          result.status?.includes("Good") || result.status?.includes("Skill Level")
+                            ? "text-green-600 dark:text-green-400"
+                            : result.status?.includes("Needs") || result.status?.includes("Check")
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : "text-blue-600 dark:text-blue-400"
+                        }`}
+                      >
+                        {result.status}
+                      </p>
+                      
+                      {/* Predição da IA */}
+                      {result.ai_prediction?.skill_level && (
+                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                          🤖 {result.ai_prediction.skill_level}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
