@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService } from "../services/apiService";
 import Button from "../components/ui/Button";
+import AIFeedbackCard from "../components/AIFeedbackCard";
+import QualityIndicator from "../components/QualityIndicator";
+import SessionDetailModal from "../components/SessionDetailModal";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -10,6 +13,7 @@ export default function Dashboard() {
 
   const [previousResults, setPreviousResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
     async function loadUserSessions() {
@@ -167,59 +171,90 @@ export default function Dashboard() {
                 return (
                   <div
                     key={result.session_id || result.id || index}
-                    className={`flex justify-between items-center border p-4 rounded-lg ${
+                    className={`border p-4 rounded-lg transition-all hover:shadow-lg cursor-pointer ${
                       is3D
-                        ? "border-green-500/30 bg-green-50/5"
-                        : "border-border"
+                        ? "border-green-500/30 bg-green-50/5 hover:border-green-500/50"
+                        : "border-border hover:border-primary/30"
                     }`}
+                    onClick={() => setSelectedSession(result)}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{result.mode || result.procedure_type || "Unknown"}</p>
-                        {isAI && (
-                          <span className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
-                            AI Analysis
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted">{result.date || "N/A"}</p>
-                      
-                      {/* Métricas da IA */}
-                      {result.metrics && (
-                        <div className="mt-2 flex gap-3 text-xs text-muted">
-                          <span title="Economy of Motion">
-                            📏 {result.metrics.economy_of_motion}
-                          </span>
-                          <span title="Smoothness Score">
-                            🎯 {result.metrics.smoothness_score}
-                          </span>
-                          <span title="Average Velocity">
-                            ⚡ {result.metrics.avg_velocity}
-                          </span>
+                    {/* Header da Sessão */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium">{result.mode || result.procedure_type || "Unknown"}</p>
+                          {isAI && (
+                            <span className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                              AI Analysis
+                            </span>
+                          )}
+                          {is3D && (
+                            <span className="text-[10px] bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full">
+                              3D
+                            </span>
+                          )}
                         </div>
-                      )}
+                        <p className="text-sm text-muted">{result.date || "N/A"}</p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-semibold">{result.score}</p>
+                        <p
+                          className={`text-sm ${
+                            result.status?.includes("Good") || result.status?.includes("Skill Level")
+                              ? "text-green-600 dark:text-green-400"
+                              : result.status?.includes("Needs") || result.status?.includes("Check")
+                              ? "text-yellow-600 dark:text-yellow-400"
+                              : "text-blue-600 dark:text-blue-400"
+                          }`}
+                        >
+                          {result.status}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <p className="font-semibold">{result.score}</p>
-                      <p
-                        className={`text-sm ${
-                          result.status?.includes("Good") || result.status?.includes("Skill Level")
-                            ? "text-green-600 dark:text-green-400"
-                            : result.status?.includes("Needs") || result.status?.includes("Check")
-                            ? "text-yellow-600 dark:text-yellow-400"
-                            : "text-blue-600 dark:text-blue-400"
-                        }`}
-                      >
-                        {result.status}
-                      </p>
-                      
-                      {/* Predição da IA */}
-                      {result.ai_prediction?.skill_level && (
-                        <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                          🤖 {result.ai_prediction.skill_level}
-                        </p>
-                      )}
+                    {/* Feedback da IA - Visual Destacado */}
+                    {result?.ai_prediction && AIFeedbackCard && (
+                      <div className="mb-3">
+                        <AIFeedbackCard 
+                          prediction={result.ai_prediction} 
+                          metrics={result.metrics}
+                        />
+                      </div>
+                    )}
+
+                    {/* Indicador de Qualidade */}
+                    {result?.ai_prediction?.quality_level && QualityIndicator && (
+                      <div className="mb-3">
+                        <QualityIndicator 
+                          qualityLevel={result.ai_prediction.quality_level}
+                          score={result.ai_prediction.smoothness_score}
+                          size="sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* Métricas (se não houver predição da IA) */}
+                    {result.metrics && !result.ai_prediction && (
+                      <div className="mt-2 flex gap-3 text-xs text-muted">
+                        <span title="Economy of Motion">
+                          📏 {result.metrics.economy_of_motion}
+                        </span>
+                        <span title="Smoothness Score">
+                          🎯 {result.metrics.smoothness_score}
+                        </span>
+                        <span title="Average Velocity">
+                          ⚡ {result.metrics.avg_velocity}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Indicador de clique */}
+                    <div className="mt-3 pt-3 border-t text-xs text-muted flex items-center justify-end gap-1">
+                      <span>Clique para ver detalhes</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
                 );
@@ -230,6 +265,14 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Modal de Detalhes */}
+      {selectedSession && SessionDetailModal && (
+        <SessionDetailModal 
+          session={selectedSession} 
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
   );
 }

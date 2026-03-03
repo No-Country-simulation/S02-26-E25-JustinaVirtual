@@ -1,172 +1,163 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiService } from "../services/apiService";
 
-// Adicionando { onRegisterSuccess } para avisar a Home que o médico se cadastrou
-export default function RegistrationForm({ onRegisterSuccess }) {
+export default function RegistrationForm() {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
-    dni: "",
     name: "",
     email: "",
-    phone: "",
     password: "",
-    role: "USER",
+    role: "TRAINEE",
+    crm: ""
   });
+
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    let formattedValue = value;
-
-    // 1. Melhoria: Forçar Nome em CAIXA ALTA
-    if (name === "name") {
-      formattedValue = value.toUpperCase();
-    }
-
-    // 2. Melhoria: Formatação automática de WhatsApp (11) 99999-9999
-    if (name === "phone") {
-      const numbers = value.replace(/\D/g, ""); // Remove o que não é número
-      
-      if (numbers.length <= 11) {
-        formattedValue = numbers
-          .replace(/^(\d{2})(\d)/g, "($1) $2")
-          .replace(/(\d{5})(\d)/, "$1-$2");
-      } else {
-        formattedValue = formData.phone; // Bloqueia se passar de 11 dígitos
-      }
-    }
-
-    setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    try {
-      // 1. Salva os dados para a telemetria
-      localStorage.setItem("justina_user", JSON.stringify(formData));
-      
-      // 2. Avisa o componente pai (MainSection) para liberar o botão verde
-      if (onRegisterSuccess) {
-        onRegisterSuccess();
-      }
+  const validateForm = () => {
+    if (formData.password.length < 6) {
+      return "A senha deve ter pelo menos 6 caracteres.";
+    }
 
-      console.log("✅ Integração FE-5: Payload gerado com máscaras.", formData);
-      
-      // 3. Feedback visual para o usuário
-      alert(`Acesso autorizado: DR. ${formData.name}. Iniciando Protocolo...`);
-      
-      // 4. Vai direto para o simulador
-      navigate("/simulator"); 
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const validationError = validateForm();
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await apiService.registerUser(formData);
+
+      navigate("/simulator");
+
     } catch (error) {
-      console.error("Erro no registro:", error);
-      alert("Erro ao salvar dados. Verifique o console.");
+      setErrorMessage(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-slate-900 p-8 rounded-3xl shadow-2xl border border-slate-800">
-      <div className="text-center mb-8">
-        <div className="inline-block p-3 bg-blue-500/10 rounded-full mb-2">
-          <span className="text-3xl">🩺</span>
-        </div>
-        <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
-          Registro do Médico
+    <div className="bg-slate-900 p-8 rounded-3xl shadow-2xl border border-slate-800 max-w-md mx-auto">
+      
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">
+          Portal Justina
         </h2>
-        <p className="text-slate-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
-          Justina Virtual Protocol
+        <p className="text-slate-500 text-[9px] font-mono uppercase tracking-widest mt-1">
+          Identity Management System
         </p>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">DNI / ID</label>
-            <input 
-              name="dni"
-              value={formData.dni}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-              placeholder="12345678" 
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Senha</label>
-            <input 
-              name="password"
-              type="password"
-              value={formData.password}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-              placeholder="••••••" 
-              onChange={handleChange}
-              required
-            />
-          </div>
+      {errorMessage && (
+        <div className="bg-red-900/40 border border-red-600 text-red-300 text-xs p-3 rounded-xl mb-4">
+          {errorMessage}
         </div>
+      )}
 
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nome Completo (CAIXA ALTA)</label>
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+            Nome Completo
+          </label>
           <input 
             name="name"
             value={formData.name}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-            placeholder="DR. NOME EXEMPLO" 
             onChange={handleChange}
             required
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            placeholder="Nome completo"
           />
         </div>
 
-        <div className="grid grid-cols-5 gap-3">
-           <div className="col-span-3 space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">E-mail Acadêmico</label>
-              <input 
-                name="email"
-                type="email"
-                value={formData.email}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-                placeholder="med@hosp.com" 
-                onChange={handleChange}
-                required
-              />
-           </div>
-           <div className="col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">WhatsApp</label>
-              <input 
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none text-sm" 
-                placeholder="(85) 99999-9999" 
-                onChange={handleChange}
-                required
-              />
-           </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+            E-mail Acadêmico
+          </label>
+          <input 
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            placeholder="medico@hospital.com"
+          />
         </div>
 
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Nível de Acesso</label>
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+            Senha de Acesso
+          </label>
+          <input 
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+            Nível Hierárquico
+          </label>
           <select 
             name="role"
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white cursor-pointer outline-none text-sm"
-            onChange={handleChange}
             value={formData.role}
+            onChange={handleChange}
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white cursor-pointer outline-none text-sm"
           >
-            <option value="ADMIN">ADMIN (Professor)</option>
-            <option value="USER">USER (Residente)</option>
             <option value="TRAINEE">TRAINEE (Estudante)</option>
+            <option value="USER">USER (Residente)</option>
+            <option value="ADMIN">ADMIN (Administrador)</option>
           </select>
         </div>
+    
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">CRM (Opcional para Estudantes)</label>
+          <input 
+            name="crm" 
+            value={formData.crm}
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
+            placeholder="123456-UF" 
+            onChange={handleChange}          
+          />
+      </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl transition-all font-black text-xs uppercase tracking-[0.2em] shadow-lg mt-4"
+          disabled={loading}
+          className={`w-full p-4 rounded-xl transition-all font-black text-xs uppercase tracking-widest mt-4 shadow-lg
+          ${loading 
+            ? "bg-slate-700 cursor-not-allowed text-white" 
+            : "bg-blue-600 hover:bg-blue-500 text-white"}`}
         >
-          Iniciar Protocolo 🚀
+          {loading ? "Processando..." : "Registrar e Iniciar 🚀"}
         </button>
       </form>
-      <p className="text-[9px] text-slate-600 font-mono text-center mt-6 uppercase">
-        Auth System FE-5 // Telemetry DD-Ready // v1.0.4
-      </p>
     </div>
   );
 }
