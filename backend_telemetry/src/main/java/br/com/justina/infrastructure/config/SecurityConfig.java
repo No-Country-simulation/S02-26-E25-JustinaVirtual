@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/telemetria/**").authenticated()
                         .requestMatchers("/sessoes/**").authenticated()
                         .requestMatchers("/usuarios/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/usuarios").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
@@ -63,7 +63,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://s02-26-e25-justina-virtual.vercel.app"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://localhost:5173", "https://s02-26-e25-justina-virtual.vercel.app"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(true);
