@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../services/apiService";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
@@ -11,18 +12,29 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
 
-    // 🔐 Simulação de login
-    const medicoFake = {
-      name: "Dr. Ayran Vieira",
-      crm: "CRM 123456",
-      specialty: "Cirurgia Geral",
-    };
+    try {  
+      const response = await fetch(`${API_BASE_URL}/usuarios/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
 
-    login(medicoFake);
-    navigate("/dashboard");
+      if (!response.ok) throw new Error("Credenciais inválidas");
+
+      const data = await response.json();
+    
+      localStorage.setItem('token', data.token);
+
+      login(data); 
+      
+      navigate("/dashboard");
+
+    } catch (error) {
+      alert("Erro ao acessar o sistema: " + error.message);
+    }
   }
 
   return (
