@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import torch
+import json
+import zipfile
+from io import BytesIO
 
 from app.schemas.telemetry import (
     TelemetryPoint, 
@@ -13,11 +17,35 @@ from app.schemas.telemetry import (
 from app.services.data_collector import data_collector
 from app.services.prediction_service import get_prediction_service
 
+# Database (PostgreSQL no Render)
+try:
+    from app.database import IS_PRODUCTION, init_database, get_all_sessions
+except ImportError:
+    IS_PRODUCTION = False
+    init_database = lambda: None
+    get_all_sessions = lambda: []
+
 app = FastAPI(
     title="Justina AI Service",
     description="API de IA para análise e coleta de telemetria cirúrgica",
     version="1.0.0"
 )
+
+# Inicializa banco de dados (PostgreSQL no Render)
+@app.on_event("startup")
+async def startup_event():
+    """Inicializa recursos na inicialização"""
+    if IS_PRODUCTION:
+        print("🚀 Iniciando em modo PRODUÇÃO (Render)")
+        print("📊 Inicializando PostgreSQL...")
+        try:
+            init_database()
+            print("✅ PostgreSQL inicializado com sucesso")
+        except Exception as e:
+            print(f"❌ Erro ao inicializar PostgreSQL: {e}")
+    else:
+        print("💻 Iniciando em modo LOCAL (desenvolvimento)")
+        print("📁 Dados serão salvos em dataset/collected_data/")
 
 # Configurar CORS para permitir requisições do frontend
 app.add_middleware(
@@ -263,3 +291,63 @@ async def get_model_status():
             "loaded": False,
             "error": str(e)
         }
+
+
+@app.get("/sessions/export")
+async def export_all_sessions():
+    """
+    Exporta todas as sessões do PostgreSQL como ZIP com arquivos JSON
+    
+    **Uso:** Baixar dados do Render para treinar modelo localmente
+    
+    - No Render: Busca do PostgreSQL
+    - Local: Retorna erro (dados já estão em dataset/)
+    """
+    if not IS_PRODUCTION:
+        raise HTTPException(
+            status_code=400, 
+            detail="Exportação disponível apenas no Render. Localmente, acesse: dataset/collected_data/"
+        )
+    
+    try:
+        # Busca todas as sessões do PostgreSQL
+        sessions = get_all_sessions()
+        
+        if not sessions:
+            raise HTTPException(status_code=404, detail="Nenhuma sessão encontrada")
+        
+        # Cria ZIP em memória
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for session in sessions:
+                # session_data já é um dict vindo do PostgreSQL
+                session_data = session.get('session_data', {})
+                
+                # Garante formato consistente
+                if isinstance(session_data, str):
+                    session_data = json.loads(session_data)
+                
+                # Nome do arquivo
+                session_id = session.get('session_id')
+                filename = f"{session_id}.json"
+                
+                # Adiciona ao ZIP
+                json_content = json.dumps(session_data, indent=2, default=str)
+                zip_file.writestr(filename, json_content)
+        
+        # Prepara para download
+        zip_buffer.seek(0)
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename=justina_sessions_export.zip",
+                "X-Total-Sessions": str(len(sessions))
+            }
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao exportar: {str(e)}")

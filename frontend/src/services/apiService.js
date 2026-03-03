@@ -1,5 +1,5 @@
-const API_BASE_URL = "http://localhost:8081/api";
-const AI_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api";
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
 
 export const apiService = {
   // 1. Envio de Telemetria (Reconstrução Task 8)

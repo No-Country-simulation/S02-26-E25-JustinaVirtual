@@ -5,11 +5,19 @@ Salva sessões de treinamento para criar dataset
 
 import json
 import uuid
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 from app.schemas.telemetry import TrainingSession, TelemetryPoint
 import numpy as np
+
+# Importa database apenas se necessário
+try:
+    from app.database import IS_PRODUCTION, save_session_to_db
+except ImportError:
+    IS_PRODUCTION = False
+    save_session_to_db = None
 
 
 class DataCollector:
@@ -100,10 +108,13 @@ class DataCollector:
         difficulty_rating: Optional[int] = None
     ) -> Path:
         """
-        Finaliza sessão, calcula métricas e salva em arquivo
+        Finaliza sessão, calcula métricas e salva
+        
+        - Local: Salva em JSON (dataset/collected_data/)
+        - Render: Salva em PostgreSQL (permanente)
         
         Returns:
-            Path do arquivo salvo
+            Path do arquivo salvo (ou None se só PostgreSQL)
         """
         if session_id not in self.active_sessions:
             raise ValueError(f"Sessão {session_id} não encontrada")
@@ -117,14 +128,36 @@ class DataCollector:
         # Calcular métricas
         session = self.calculate_metrics(session)
         
-        # Salvar em arquivo JSON
-        filename = f"{session_id}.json"
-        filepath = self.data_dir / filename
+        # Serializar dados
+        session_data = session.model_dump()
         
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(session.model_dump(), f, indent=2, default=str)
-        
-        return filepath
+        # MODO HÍBRIDO: Local = JSON, Render = PostgreSQL
+        if IS_PRODUCTION and save_session_to_db:
+            # Produção: Salva no PostgreSQL (permanente)
+            try:
+                save_session_to_db(session_id, session_data)
+                print(f"✅ Sessão {session_id} salva no PostgreSQL")
+            except Exception as e:
+                print(f"❌ Erro ao salvar no PostgreSQL: {e}")
+                # Fallback: salva em JSON mesmo em produção
+                filename = f"{session_id}.json"
+                filepath = self.data_dir / filename
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(session_data, f, indent=2, default=str)
+                return filepath
+            
+            # Retorna None pois não há arquivo local
+            return None
+        else:
+            # Local: Salva em arquivo JSON (como sempre)
+            filename = f"{session_id}.json"
+            filepath = self.data_dir / filename
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(session_data, f, indent=2, default=str)
+            
+            print(f"✅ Sessão {session_id} salva em {filepath}")
+            return filepath
     
     def get_dataset_stats(self) -> dict:
         """Estatísticas do dataset coletado"""
