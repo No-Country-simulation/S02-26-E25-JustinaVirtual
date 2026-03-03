@@ -1,5 +1,7 @@
-const API_BASE_URL = "http://localhost:8081/api";
+const envUrl = import.meta.env.VITE_API_URL;
+export const API_BASE_URL = envUrl && envUrl !== "" ? envUrl : "http://localhost:8080/api";
 
+console.log("Conectando em:", API_BASE_URL);
 export const apiService = {
   // 1. Envio de Telemetria
   sendTelemetry: async (payload) => {    
@@ -13,7 +15,7 @@ export const apiService = {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('token')}` // Segurança!
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           user_feedback: "Finalizado via simulador",
@@ -32,11 +34,11 @@ export const apiService = {
     }
   },
 
-  // 2. Busca Histórico Individual (Dev 3)
+  // 2. Busca Histórico Individual
   getHistory: async (dni) => {
     if (!dni) throw new Error("DNI é obrigatório.");
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/medicos/${dni}/historico`);
+      const response = await fetch(`${API_BASE_URL}/medicos/${dni}/historico`);
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -48,12 +50,29 @@ export const apiService = {
   // 3. Relatório para a Diretoria
   getDirectorReport: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/diretoria/relatorio-geral`);
+      const response = await fetch(`${API_BASE_URL}/diretoria/relatorio-geral`);
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
       return await response.json();
     } catch (error) {
       console.error("❌ Erro Relatório Diretoria:", error.message);
       throw error;
     }
+  },
+
+  // 4. Listar todos os usuários (Admin)
+  getAllUsers: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/usuarios`, {
+        headers: { 
+          "Authorization": `Bearer ${localStorage.getItem('token')}` 
+        },
+      });
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao listar usuários:", error.message);
+      throw error;
+    }
   }
 };
+window.apiService = apiService;
