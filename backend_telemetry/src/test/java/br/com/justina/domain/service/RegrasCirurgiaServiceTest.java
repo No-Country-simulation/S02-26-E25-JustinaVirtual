@@ -34,7 +34,7 @@ class RegrasCirurgiaServiceTest {
 
         cirurgia = Cirurgia.builder()
                 .tempoEstimadoSegundos(60) // Cirurgia deve durar 1 minuto
-                .zonasProibidas(new ArrayList<>())
+                .zonasProibidas(List.of("VEIA_RENAL:10.0:20.0:10.0:20.0:0.0:5.0"))
                 .build();
 
         sessao = SessaoSimulacao.builder()
