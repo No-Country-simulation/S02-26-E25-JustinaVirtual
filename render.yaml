@@ -13,7 +13,7 @@ services:
     runtime: python
     region: ohio
     plan: free
-    branch: feature/3d-simulator-ia-integration
+    branch: feature/render-deployment
     rootDir: ai_service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -29,23 +29,3 @@ services:
         value: "3.11"
     autoDeploy: true
 
-  # Frontend React
-  - type: web
-    name: justina-frontend
-    runtime: node
-    region: ohio
-    plan: free
-    branch: feature/3d-simulator-ia-integration
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm run preview -- --host 0.0.0.0 --port 5173
-    healthCheckPath: /
-    envVars:
-      - key: VITE_AI_BASE_URL
-        fromService:
-          type: web
-          name: justina-ai-backend
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: NODE_VERSION
-        value: "20"
-    autoDeploy: true
