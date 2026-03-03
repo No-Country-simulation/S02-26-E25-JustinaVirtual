@@ -70,9 +70,11 @@ class TelemetriaIntegrationTest {
     @DisplayName("Deve finalizar uma cirurgia com sucesso")
     void shouldFinalizeSurgerySuccessfully() throws Exception {
         Usuario user = criarUsuarioPersistido();
+        Cirurgia cirurgia = criarCirurgiaPersistida();
 
         SessaoSimulacao sessao = SessaoSimulacao.builder()
                 .usuario(user)
+                .cirurgia(cirurgia)
                 .status(StatusSessao.EM_ANDAMENTO)
                 .dataInicio(LocalDateTime.now().minusMinutes(10))
                 .build();
@@ -85,8 +87,7 @@ class TelemetriaIntegrationTest {
 
         FinalizarSessaoRequest request = new FinalizarSessaoRequest(10, 85.5);
 
-        mockMvc.perform(post("/telemetria/finalizar")
-                        .param("sessaoId", idReal.toString())
+        mockMvc.perform(post("/telemetria/{sessaoId}/finalizar", idReal)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
@@ -106,13 +107,29 @@ class TelemetriaIntegrationTest {
     }
 
     private SessaoSimulacao criarSessaoPersistida(UUID id, Usuario user) {
+        Cirurgia cirurgia = criarCirurgiaPersistida(); // Cria a cirurgia obrigatória
+
         SessaoSimulacao sessao = SessaoSimulacao.builder()
                 .id(id)
                 .usuario(user)
+                .cirurgia(cirurgia) // <--- ADICIONE ESTA LINHA
                 .status(StatusSessao.EM_ANDAMENTO)
                 .dataInicio(LocalDateTime.now().minusMinutes(10))
                 .build();
         SessaoSimulacao persistida = entityManager.merge(sessao);
+        entityManager.flush();
+        return persistida;
+    }
+
+    private Cirurgia criarCirurgiaPersistida() {
+        Cirurgia cirurgia = Cirurgia.builder()
+                .nomeProcedimento("Colecistectomia de Teste")
+                .nivelDificuldade("INICIANTE")
+                .dataCriacao(LocalDateTime.now())
+                .tempoEstimadoSegundos(600)
+                .build();
+
+        Cirurgia persistida = entityManager.merge(cirurgia);
         entityManager.flush();
         return persistida;
     }

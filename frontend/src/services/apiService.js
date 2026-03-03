@@ -1,14 +1,17 @@
-const API_BASE_URL = "http://localhost:8081/api";
+const envUrl = import.meta.env.VITE_API_URL;
+export const API_BASE_URL = envUrl && envUrl !== "" ? envUrl : "http://localhost:8080/api";
+export const AI_BASE_URL = "http://localhost:8000";
+
+console.log("Conectando em:", API_BASE_URL);
 
 export const apiService = {
-  // 1. Envio de Telemetria (Reconstrução Task 8)
+  // 1. Envio de Telemetria 
   sendTelemetry: async (payload) => {
     if (!payload || !payload.telemetry || payload.telemetry.length === 0) {
       console.warn("⚠️ Tentativa de envio sem dados de telemetria.");
       return { success: false, message: "Nenhum movimento capturado." };
     }
 
-    // --- TRADUÇÃO PARA O FORMATO QUE O MOTOR JAVA ESPERA ---
     const user = JSON.parse(localStorage.getItem("justina_user") || "{}");
     const usuarioId = user.id || "11111111-1111-1111-1111-111111111111";
 
@@ -25,24 +28,20 @@ export const apiService = {
     };
 
     try {
-      // Enviamos para a rota de análise que processa as colisões e pontuação
       const response = await fetch(`${API_BASE_URL}/telemetria/analisar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`, // Mantido por compatibilidade com a branch dev
+          "Accept": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(javaPayload),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Erro no servidor: ${response.status}`,
-        );
+        throw new Error(errorData.message || `Erro no servidor: ${response.status}`);
       }
-
       return await response.json();
     } catch (error) {
       console.error("🚨 Erro na Telemetria:", error.message);
@@ -50,18 +49,59 @@ export const apiService = {
     }
   },
 
-  // 2. Histórico do Médico
+  // 2. Busca Histórico Individual
   getHistory: async (dni) => {
     if (!dni) throw new Error("DNI é obrigatório.");
-    const response = await fetch(`${API_BASE_URL}/v1/medicos/${dni}/historico`);
-    return await response.json();
+    try {    
+      const response = await fetch(`${API_BASE_URL}/medicos/${dni}/historico`);
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`❌ Erro DNI ${dni}:`, error.message);
+      throw error;
+    }
   },
 
   // 3. Relatório para a Diretoria
   getDirectorReport: async () => {
-    const response = await fetch(
-      `${API_BASE_URL}/v1/diretoria/relatorio-geral`,
-    );
-    return await response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/diretoria/relatorio-geral`);
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro Relatório Diretoria:", error.message);
+      throw error;
+    }
   },
+
+  // 4. Funções da IA (Mantendo o que veio da branch dev)
+  startDataCollection: async (userId, procedureType = "renal_surgery") => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, procedure_type: procedureType })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao iniciar coleta:", error.message);
+      throw error;
+    }
+  },
+
+  // 5. Listar todos os usuários (Admin - Exclusivo da sua feature)
+  getAllUsers: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/usuarios`, {
+        headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao listar usuários:", error.message);
+      throw error;
+    }
+  }
 };
+
+window.apiService = apiService;
