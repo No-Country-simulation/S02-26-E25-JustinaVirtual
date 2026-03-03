@@ -1,129 +1,127 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import CanvasStage from "./CanvasStage";
 import { createInstrument } from "./Instrument";
 import { createTargetZone } from "./targetZone";
 import { createMetrics } from "./MetricsEngine";
+import { apiService } from "../../services/apiService";
+import { useTrainingSession } from "../../contexts/TrainingSessionContext";
+import TrainingHUD from "../components/hud/TrainingHUD";
 
 const instrument = createInstrument();
 const target = createTargetZone();
 const metrics = createMetrics();
 
 export default function Simulator2D() {
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const { session } = useTrainingSession();
   const [started, setStarted] = useState(false);
+  
+  // 🔥 CORREÇÃO: useRef para evitar que o mouse trave a renderização do React
+  const mouseRef = useRef({ x: 0, y: 0 });
 
   const onFrame = useCallback((ctx) => {
     target.draw(ctx);
 
-    const isInside = target.contains(mouse.x, mouse.y);
+    // Usa a referência do mouse (estável) em vez do estado (instável)
+    const { x, y } = mouseRef.current;
+    const isInside = target.contains(x, y);
 
-    instrument.update(mouse.x, mouse.y, isInside);
+    instrument.update(x, y, isInside);
     instrument.drawPath(ctx);
     instrument.draw(ctx);
 
-    // ⚠️ Só atualiza métricas se iniciou
     if (started) {
       metrics.update(isInside, instrument.path);
     }
 
-    ctx.fillStyle = "black";
-    ctx.fillText(`Tempo: ${started ? metrics.getElapsedTime() : 0}s`, 10, 20);
-    ctx.fillText(`Erros: ${started ? metrics.errors : 0}`, 10, 40);
-    ctx.fillText(`Tremor: ${started ? metrics.getTremorScore() : 0}`, 10, 60);
-    ctx.fillText(
-      `Velocidade: ${started ? metrics.lastSpeed.toFixed(2) : 0}`,
-      10,
-      80
-    );
-    ctx.fillText(`Excessos: ${started ? metrics.speedViolations : 0}`, 10, 100);
-
+    // Estilização do Log de Debug no Canvas
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "#4ade80";
+    ctx.fillText(`Tempo: ${started ? metrics.getElapsedTime() : 0}s`, 10, 25);
+    ctx.fillText(`Erros: ${started ? metrics.errors : 0}`, 10, 45);
+    ctx.fillText(`Tremor: ${started ? metrics.getTremorScore() : 0}`, 10, 65);
+    
     if (!started) {
-      ctx.fillText("Clique para iniciar", 300, 250);
+      ctx.fillStyle = "white";
+      ctx.textAlign = "center";
+      ctx.fillText("CLIQUE PARA INICIAR", 450, 275);
     }
-  }, [mouse, started]);
+  }, [started]); // Removemos 'mouse' das dependências para destravar o loop
 
- return (
+  const handleFinish = async () => {
+    if (!started) return;
+    setStarted(false);
+
+    // 🚀 AJUSTE DE INTEGRAÇÃO: Mapeamento compatível com a sua IA
+    const payload = instrument.path.map(p => ({
+      usuarioId: session?.id || session?.sessionId || "sessao-emergencia-001",
+      eixoX: Math.round(p.x),
+      eixoY: Math.round(p.y),
+      eixoZ: 0, // Necessário para o DTO da IA
+      tempo: new Date().toISOString() // Formato ISO que o Python exige
+    }));
+
+    try {
+      console.log("📦 Sincronizando com a IA de Auditoria...");
+      const feedback = await apiService.sendTelemetry(payload);
+      alert(`Sucesso! Precisão IA: ${feedback.precisao || "Processada"}\nErros: ${metrics.errors}`);
+    } catch (err) {
+      console.error(err);
+      alert("Falha na sincronização. Verifique se o servidor IA está ativo.");
+    }
+  };
+
+  return (
     <div className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
       
-      {/* 1. O HUD (TrainingHUD) agora recebe os dados em tempo real */}
       <TrainingHUD 
         pathCount={instrument.path.length} 
         timer={started ? metrics.getElapsedTime() : "00:00"}
-        errors={started ? metrics.errors : 0}
       />
 
-      {/* 2. Área do Simulador */}
       <div
-        className="relative cursor-crosshair rounded-xl overflow-hidden border-4 border-slate-800 shadow-2xl"
+        className="relative cursor-none rounded-xl overflow-hidden border-4 border-slate-800 shadow-2xl"
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          setMouse({
+          // Atualiza a Ref sem disparar re-render do componente
+          mouseRef.current = {
             x: e.clientX - rect.left,
             y: e.clientY - rect.top
-          });
+          };
         }}
         onClick={() => {
           if (!started) {
             metrics.reset();
-            instrument.path = []; // Limpa o rastro anterior ao começar de novo
+            instrument.path = [];
             setStarted(true);
-            console.log("🚀 Telemetria Iniciada...");
           }
         }}
       >
-        {/* O CanvasStage para correção do loop() */}
         <CanvasStage onFrame={onFrame} />
 
-        {/* Overlay de Início */}
         {!started && (
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-            <p className="text-white font-mono animate-pulse text-lg">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+            <p className="text-white font-mono animate-pulse text-lg border-2 border-white/20 p-4">
               CLIQUE NO RIM PARA INICIAR PROCEDIMENTO
             </p>
           </div>
         )}
       </div>
 
-      {/* 3. Painel de Controle de Auditoria (Baixo do Canvas) */}
       <div className="mt-6 flex gap-4">
         <button
-          onClick={async () => {
-            if (!started) return;
-            setStarted(false); // Para as métricas
-            
-            // PREPARAÇÃO PARA O FABIO (Auditoria de Pontos)
-            const payload = instrument.path.map(p => ({
-              eixoX: Math.round(p.x),
-              eixoY: Math.round(p.y),
-              timestamp: Date.now(),
-              dentroAlvo: p.inside
-            }));
-
-            try {
-              console.log("📦 Enviando auditoria para o Backend...");
-              await apiService.sendTelemetry(payload);
-              alert(`Sessão Sincronizada!\nErros: ${metrics.errors}\nTremor Médio: ${metrics.getTremorScore()}`);
-            } catch (err) {
-              alert("Erro na sincronização. Verifique a conexão com o servidor Java.");
-            }
-          }}
+          onClick={handleFinish}
           disabled={!started || instrument.path.length === 0}
-          className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-full transition-all disabled:opacity-30 shadow-lg shadow-red-900/20"
+          className="px-10 py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl transition-all disabled:opacity-30 shadow-xl"
         >
           ENCERRAR E ENVIAR TELEMETRIA
         </button>
 
         <button 
           onClick={() => window.location.reload()}
-          className="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-full transition-all"
+          className="px-10 py-4 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-xl transition-all"
         >
           REINICIAR
         </button>
-      </div>
-
-      {/* Log de Auditoria em tempo real (Opcional, para debug) */}
-      <div className="mt-4 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-        Protocolo Estável // Latência: 2ms // DD-Ready
       </div>
     </div>
   );
