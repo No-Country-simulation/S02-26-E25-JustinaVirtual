@@ -2,31 +2,63 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService } from "../services/apiService";
+import AIFeedbackCard from "../components/AIFeedbackCard";
+import QualityIndicator from "../components/QualityIndicator";
+import SessionDetailModal from "../components/SessionDetailModal";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const [previousResults, setPreviousResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSession, setSelectedSession] = useState(null);
   const [usersList, setUsersList] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null); 
-  const [previousResults, setPreviousResults] = useState([
-    { id: 'm1', date: "01/03/2026", mode: "NEFRECTOMIA 3D", score: 92, status: "EXCELENTE" },
-    { id: 'm2', date: "28/02/2026", mode: "REVISÃO TEÓRICA", score: 75, status: "CONCLUÍDO" },
-  ]);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
+    async function loadUserSessions() {
+      if (!user) return;
+      
+      setLoading(true);
+      
+      try {
+        const aiSessions = await apiService.getUserSessions(user.email);
+        const localHistory = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
+        
+        const aiResults = aiSessions.sessions || [];
+        const combined = [...aiResults, ...localHistory];
+        
+        const unique = combined.reduce((acc, item) => {
+          if (!acc.find(x => x.session_id === item.session_id || x.id === item.id)) {
+            acc.push(item);
+          }
+          return acc;
+        }, []);
+        
+        unique.sort((a, b) => {
+          const dateA = a.date || a.timestamp || "";
+          const dateB = b.date || b.timestamp || "";
+          return dateB.localeCompare(dateA);
+        });
+        
+        setPreviousResults(unique);
+      } catch (error) {
+        console.error("Erro ao carregar sessões:", error);
+        const localHistory = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
+        setPreviousResults(localHistory);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
     if (isAdmin) {
       apiService.getAllUsers().then(setUsersList).catch(console.error);
     }
-    const salvos = JSON.parse(localStorage.getItem("historico_cirurgias") || "[]");
-    if (salvos.length > 0) {
-      setPreviousResults(prev => {
-        const idsExistentes = new Set(prev.map(p => p.id));
-        const novosUnicos = salvos.filter(s => !idsExistentes.has(s.id));
-        return [...novosUnicos, ...prev];
-      });
-    }
+    
+    loadUserSessions();
   }, [user, isAdmin]);
 
   if (!user) return (
@@ -73,10 +105,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          <button onClick={logout} className="mt-6 md:mt-0 px-8 py-3 bg-red-500/5 hover:bg-red-500 border border-red-500/20 hover:border-red-400 text-red-500 hover:text-white text-[9px] font-black uppercase tracking-[0.4em] transition-all rounded-xl">
-            [ ENCERRAR SESSÃO ]
-          </button>
+                 
         </header>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -233,18 +262,50 @@ export default function Dashboard() {
                 {isAdmin ? 'Logs de Atividade Recente' : 'Sessões Recentes'}
               </h3>
               <div className="space-y-4">
-                {previousResults.map(res => (
-                  <div key={res.id} className="group flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-transparent hover:border-blue-500/20 hover:bg-white/[0.05] transition-all">
-                    <div>
-                      <p className="text-[10px] font-black text-white uppercase italic group-hover:text-blue-400 transition-colors">{res.mode}</p>
-                      <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">{res.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[13px] font-black text-blue-400">{res.score}%</div>
-                      <div className="text-[7px] text-slate-500 uppercase font-black tracking-tighter">{res.status}</div>
-                    </div>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <p className="text-[9px] text-slate-500 mt-2 uppercase font-black">Carregando...</p>
                   </div>
-                ))}
+                ) : previousResults.length === 0 ? (
+                  <p className="text-center text-slate-600 text-[10px] uppercase font-black tracking-widest py-4 italic">Nenhuma sessão registrada</p>
+                ) : (
+                  previousResults.slice(0, 5).map((res, index) => {
+                    const isAI = res.session_id && res.ai_prediction;
+                    const is3D = res.mode === "3D Surgery" || res.procedure_type?.includes("3d");
+                    
+                    return (
+                      <div 
+                        key={res.session_id || res.id || index} 
+                        className="group flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-transparent hover:border-blue-500/20 hover:bg-white/[0.05] transition-all cursor-pointer"
+                        onClick={() => setSelectedSession(res)}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-[10px] font-black text-white uppercase italic group-hover:text-blue-400 transition-colors">
+                              {res.mode || res.procedure_type || "Unknown"}
+                            </p>
+                            {isAI && (
+                              <span className="text-[7px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-full uppercase font-black">
+                                IA
+                              </span>
+                            )}
+                            {is3D && (
+                              <span className="text-[7px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded-full uppercase font-black">
+                                3D
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[8px] text-slate-600 font-bold uppercase mt-1">{res.date}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[13px] font-black text-blue-400">{res.score}%</div>
+                          <div className="text-[7px] text-slate-500 uppercase font-black tracking-tighter">{res.status}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
               <button className="w-full mt-6 py-4 border-t border-white/5 text-[9px] font-black uppercase tracking-[0.5em] text-slate-600 hover:text-cyan-400 transition-all duration-300">
                 {isAdmin ? 'BAIXAR RELATÓRIO DE GESTÃO_' : 'EXPORTAR RELATÓRIO COMPLETO_'}
@@ -254,6 +315,14 @@ export default function Dashboard() {
 
         </div>
       </div>
+
+      {/* Modal de Detalhes */}
+      {selectedSession && SessionDetailModal && (
+        <SessionDetailModal 
+          session={selectedSession} 
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
 
       {/* MODAL DE FEEDBACK */}
       {selectedUser && (

@@ -9,6 +9,7 @@ export default function Simulator() {
   
   const telemetryBuffer = useRef([]);
   const isFinalized = useRef(false);
+  const sessionStartTime = useRef(null);
 
   // 1. Busca o nome real do médico e garante CAIXA ALTA
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function Simulator() {
           const user = JSON.parse(dadosSalvos);
           const response = await apiService.startDataCollection(user.email, "renal_surgery_2d");
           setSessionId(response.session_id);
+          sessionStartTime.current = Date.now(); // Marca o início
         }
       } catch (error) {
         console.error("Erro ao iniciar coleta:", error);
@@ -64,12 +66,19 @@ export default function Simulator() {
 
   // Callback para receber posições do canvas
   const handlePositionUpdate = (position) => {
-    if (!sessionId || isFinalized.current) return;
+    if (!sessionId || isFinalized.current || !sessionStartTime.current) return;
+    
+    const timestampSeconds = (Date.now() - sessionStartTime.current) / 1000;
+    
     telemetryBuffer.current.push({
-      x: position.x,
-      y: position.y,
-      z: position.z || 0,
-      timestamp: Date.now()
+      timestamp: timestampSeconds,
+      position: {
+        x: position.x,
+        y: position.y,
+        z: position.z || 0
+      },
+      instrument_id: "surgical_tool",
+      velocity: null
     });
   };
 

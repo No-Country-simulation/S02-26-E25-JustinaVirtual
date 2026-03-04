@@ -184,13 +184,13 @@ class PredictionService:
     def _interpret_score(self, smoothness: float) -> str:
         """Interpretação textual do score"""
         if smoothness < 0.002:
-            return "Movimento muito suave e controlado! 🌟"
+            return "Movimento muito suave e controlado!"
         elif smoothness < 0.005:
-            return "Boa suavidade no movimento. ✅"
+            return "Boa suavidade no movimento."
         elif smoothness < 0.010:
-            return "Movimento regular, mas pode melhorar. 👍"
+            return "Movimento regular, mas pode melhorar."
         else:
-            return "Movimento com tremores. Pratique mais! 💪"
+            return "Movimento com tremores. Pratique mais!"
     
     def predict_incremental(
         self,

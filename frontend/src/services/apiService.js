@@ -57,6 +57,29 @@ export const apiService = {
         throw error;
       }
     },
+    // Atualizar perfil do usuário logado
+    updateProfile: async (data) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/usuarios/me`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `Erro: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error("❌ Erro ao atualizar perfil:", error.message);
+        throw error;
+      }
+    },
 
   // 2. Envio de Telemetria
   sendTelemetry: async (payload) => {
@@ -166,6 +189,65 @@ export const apiService = {
         "❌ Erro ao iniciar coleta:",
         error.message
       );
+      throw error;
+    }
+  },
+
+  sendTelemetryBatch: async (sessionId, telemetryPoints) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/telemetry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(telemetryPoints),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao enviar telemetria:", error.message);
+      throw error;
+    }
+  },
+
+  completeDataCollection: async (sessionId, userFeedback = null, difficultyRating = null) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_feedback: userFeedback,
+          difficulty_rating: difficultyRating,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao finalizar coleta:", error.message);
+      throw error;
+    }
+  },
+
+  getUserSessions: async (userEmail) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/user/${userEmail}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao buscar sessões:", error.message);
       throw error;
     }
   },

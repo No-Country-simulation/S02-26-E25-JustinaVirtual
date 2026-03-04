@@ -1,8 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import torch
+import json
+import zipfile
+from io import BytesIO
 
 from app.schemas.telemetry import (
     TelemetryPoint, 
@@ -13,11 +19,54 @@ from app.schemas.telemetry import (
 from app.services.data_collector import data_collector
 from app.services.prediction_service import get_prediction_service
 
+# Database (PostgreSQL no Render)
+try:
+    from app.database import IS_PRODUCTION, init_database, get_all_sessions, get_sessions_by_user
+except ImportError:
+    IS_PRODUCTION = False
+    init_database = lambda: None
+    get_all_sessions = lambda: []
+
 app = FastAPI(
     title="Justina AI Service",
     description="API de IA para análise e coleta de telemetria cirúrgica",
     version="1.0.0"
 )
+
+# Handler para erros de validação (422)
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """
+    Handler customizado para erros 422 - mostra exatamente qual campo está errado
+    """
+    errors = exc.errors()
+    print("[ERRO] Validação 422:")
+    print(f"[URL] {request.url}")
+    print(f"[DETALHES] Erros: {errors}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": errors,
+            "message": "Erro de validação: verifique o formato dos dados enviados. Esperado: List[TelemetryPoint] com campos {timestamp, position: {x, y, z}, instrument_id, velocity}"
+        }
+    )
+
+# Inicializa banco de dados (PostgreSQL no Render)
+@app.on_event("startup")
+async def startup_event():
+    """Inicializa recursos na inicialização"""
+    if IS_PRODUCTION:
+        print("[PROD] Iniciando em modo PRODUÇÃO (Render)")
+        print("[DB] Inicializando PostgreSQL...")
+        try:
+            init_database()
+            print("[OK] PostgreSQL inicializado com sucesso")
+        except Exception as e:
+            print(f"[ERRO] Erro ao inicializar PostgreSQL: {e}")
+    else:
+        print("[LOCAL] Iniciando em modo LOCAL (desenvolvimento)")
+        print("[DATASET] Dados serão salvos em dataset/collected_data/")
 
 # Configurar CORS para permitir requisições do frontend
 app.add_middleware(
@@ -26,7 +75,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174"
+        "http://127.0.0.1:5174",
+        "https://s02-26-e25-justina-virtual.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -100,6 +150,12 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
     Adiciona pontos de telemetria
     """
     try:
+        # Debug: mostrar estrutura dos dados recebidos
+        print(f"[TELEMETRIA] Recebendo para sessão {session_id}")
+        print(f"[PONTOS] Total: {len(points)}")
+        if points:
+            print(f"[SAMPLE] Primeiro ponto: {points[0]}")
+        
         data_collector.add_telemetry_batch(session_id, points)
         return {
             "status": "success",
@@ -107,8 +163,12 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
             "message": "Telemetria adicionada"
         }
     except ValueError as e:
+        print(f"[ERRO] Sessão não encontrada - {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        print(f"[ERRO] Erro ao adicionar telemetria: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -155,6 +215,110 @@ async def get_active_sessions():
     return {
         "active_sessions": active,
         "count": len(active)
+    }
+
+
+@app.get("/sessions/user/{user_id}")
+async def get_user_sessions(user_id: str):
+    """
+    Busca sessões de um usuário específico
+    
+    Retorna análise completa incluindo predição da IA quando disponível
+    """
+    if IS_PRODUCTION:
+        # Busca do PostgreSQL
+        sessions = get_sessions_by_user(user_id)
+    else:
+        # Busca dos arquivos JSON locais
+        import glob
+        session_files = glob.glob(str(data_collector.data_dir / "*.json"))
+        sessions = []
+        
+        for filepath in session_files:
+            try:
+                with open(filepath, 'r') as f:
+                    session_data = json.load(f)
+                    if session_data.get("user_id") == user_id:
+                        sessions.append({
+                            "session_id": session_data.get("session_id"),
+                            "user_id": session_data.get("user_id"),
+                            "procedure_type": session_data.get("procedure_type"),
+                            "session_data": session_data,
+                            "created_at": session_data.get("start_time")
+                        })
+            except Exception as e:
+                print(f"Erro ao ler {filepath}: {e}")
+                continue
+        
+        # Ordena por data (mais recente primeiro)
+        sessions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    # Processa cada sessão e adiciona análise da IA
+    results = []
+    for session in sessions:
+        try:
+            session_data = session.get("session_data", {})
+            
+            # Calcula métricas básicas (com defaults seguros)
+            economy = session_data.get("economy_of_motion") or 0
+            smoothness = session_data.get("smoothness_score") or 0
+            avg_velocity = session_data.get("avg_velocity") or 0
+            
+            # Predição com LSTM (se houver dados suficientes)
+            predicted_skill = None
+            ai_confidence = None
+            telemetry = session_data.get("telemetry_data", [])
+            
+            if len(telemetry) >= 10:
+                try:
+                    prediction_service = get_prediction_service()
+                    if prediction_service.model is not None:
+                        prediction = prediction_service.predict(telemetry)
+                        if "quality_level" in prediction:
+                            predicted_skill = prediction["quality_level"]
+                            ai_confidence = prediction.get("model_confidence")
+                            # Usa smoothness da IA se disponível
+                            if prediction.get("smoothness_score") is not None:
+                                smoothness = prediction["smoothness_score"]
+                except Exception as e:
+                    print(f"Erro na predição LSTM: {e}")
+            
+            # Determina status baseado nas métricas
+            status = "Good Performance"
+            if smoothness > 0.02:
+                status = "Needs Improvement"
+            elif economy > 1000:
+                status = "Check Efficiency"
+            
+            # Calcula score seguro
+            score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
+            
+            results.append({
+                "session_id": session.get("session_id"),
+                "date": (session.get("created_at", "")[:10] if session.get("created_at") else "N/A"),
+                "procedure_type": session.get("procedure_type", "unknown"),
+                "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
+                "score": f"{int(score_value)}%",
+                "status": status,
+                "metrics": {
+                    "economy_of_motion": round(economy, 2),
+                    "smoothness_score": round(smoothness, 4),
+                    "avg_velocity": round(avg_velocity, 2)
+                },
+                "ai_prediction": {
+                    "skill_level": predicted_skill,
+                    "confidence": ai_confidence,
+                    "quality_level": predicted_skill
+                }
+            })
+        except Exception as e:
+            print(f"Erro ao processar sessão: {e}")
+            continue
+    
+    return {
+        "user_id": user_id,
+        "total_sessions": len(results),
+        "sessions": results
     }
 
 
@@ -263,3 +427,63 @@ async def get_model_status():
             "loaded": False,
             "error": str(e)
         }
+
+
+@app.get("/sessions/export")
+async def export_all_sessions():
+    """
+    Exporta todas as sessões do PostgreSQL como ZIP com arquivos JSON
+    
+    **Uso:** Baixar dados do Render para treinar modelo localmente
+    
+    - No Render: Busca do PostgreSQL
+    - Local: Retorna erro (dados já estão em dataset/)
+    """
+    if not IS_PRODUCTION:
+        raise HTTPException(
+            status_code=400, 
+            detail="Exportação disponível apenas no Render. Localmente, acesse: dataset/collected_data/"
+        )
+    
+    try:
+        # Busca todas as sessões do PostgreSQL
+        sessions = get_all_sessions()
+        
+        if not sessions:
+            raise HTTPException(status_code=404, detail="Nenhuma sessão encontrada")
+        
+        # Cria ZIP em memória
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for session in sessions:
+                # session_data já é um dict vindo do PostgreSQL
+                session_data = session.get('session_data', {})
+                
+                # Garante formato consistente
+                if isinstance(session_data, str):
+                    session_data = json.loads(session_data)
+                
+                # Nome do arquivo
+                session_id = session.get('session_id')
+                filename = f"{session_id}.json"
+                
+                # Adiciona ao ZIP
+                json_content = json.dumps(session_data, indent=2, default=str)
+                zip_file.writestr(filename, json_content)
+        
+        # Prepara para download
+        zip_buffer.seek(0)
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename=justina_sessions_export.zip",
+                "X-Total-Sessions": str(len(sessions))
+            }
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao exportar: {str(e)}")
