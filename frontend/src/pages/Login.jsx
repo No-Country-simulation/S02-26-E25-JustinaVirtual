@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../services/apiService";
+import { apiService } from "../services/apiService";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
@@ -15,18 +15,11 @@ export default function Login() {
   async function handleLogin(e) {
     e.preventDefault();
 
-    try {  
-      const response = await fetch(`${API_BASE_URL}/usuarios/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) throw new Error("Credenciais inválidas");
-
-      const data = await response.json();
-    
-      localStorage.setItem('token', data.token);
+    try {        
+      const data = await apiService.loginUser({ email, password });
+  
+      localStorage.setItem('token', data.token);    
+      localStorage.setItem('justina_user', JSON.stringify(data));
 
       login(data); 
       

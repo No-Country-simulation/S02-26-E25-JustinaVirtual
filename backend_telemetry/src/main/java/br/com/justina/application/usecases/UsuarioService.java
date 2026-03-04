@@ -29,6 +29,7 @@ public class UsuarioService {
         usuario.setEmail(request.email());
         usuario.setPassword(passwordEncoder.encode(request.password()));
         usuario.setRole(request.role());
+        usuario.setCrm(request.crm());
 
         usuarioRepository.save(usuario);
     }
