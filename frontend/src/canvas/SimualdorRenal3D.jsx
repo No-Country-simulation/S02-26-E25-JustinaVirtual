@@ -26,6 +26,7 @@ export default function SimuladorRenal3D() {
   const [sessionId, setSessionId] = useState(null);
   const telemetryBuffer = useRef([]);
   const isFinalized = useRef(false);
+  const sessionStartTime = useRef(null);
 
   // Refs de lógica
   const staplerRef = useRef(0);
@@ -57,6 +58,7 @@ export default function SimuladorRenal3D() {
           const user = JSON.parse(dadosSalvos);
           const response = await apiService.startDataCollection(user.email, "renal_surgery_3d");
           setSessionId(response.session_id);
+          sessionStartTime.current = Date.now(); // Marca o início
         }
       } catch (error) {
         console.error("Erro ao iniciar coleta:", error);
@@ -102,16 +104,21 @@ export default function SimuladorRenal3D() {
     }
     setSessionLog([...logRef.current]);
 
-    // Registra evento para análise
-    const telemetryPoint = {
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      z: Math.random() * 10,
-      timestamp: Date.now(),
-      event_type: type,
-      event_status: status
-    };
-    telemetryBuffer.current.push(telemetryPoint);
+    // Registra evento para análise (formato correto da API)
+    if (sessionStartTime.current) {
+      const timestampSeconds = (Date.now() - sessionStartTime.current) / 1000;
+      const telemetryPoint = {
+        timestamp: timestampSeconds,
+        position: {
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          z: Math.random() * 10
+        },
+        instrument_id: "surgical_tool",
+        velocity: null
+      };
+      telemetryBuffer.current.push(telemetryPoint);
+    }
   };
 
   const calculateAccuracy = () => {

@@ -170,68 +170,66 @@ export const apiService = {
     }
   },
 
-  // 6. Enviar telemetria em lote para uma sessão
-  sendTelemetryBatch: async (sessionId, telemetryData) => {
+  sendTelemetryBatch: async (sessionId, telemetryPoints) => {
     try {
       const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/telemetry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telemetry_data: telemetryData })
+        body: JSON.stringify(telemetryPoints),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`Erro: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
-      console.error("❌ Erro ao enviar telemetria em lote:", error.message);
+      console.error("❌ Erro ao enviar telemetria:", error.message);
       throw error;
     }
   },
 
-  // 7. Finalizar coleta de dados e obter predição
-  completeDataCollection: async (sessionId, feedback = null) => {
+  completeDataCollection: async (sessionId, userFeedback = null, difficultyRating = null) => {
     try {
-      const body = feedback ? { user_feedback: feedback.user_feedback, difficulty_rating: feedback.difficulty_rating } : {};
-      
       const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          user_feedback: userFeedback,
+          difficulty_rating: difficultyRating,
+        }),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`Erro: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
-      console.error("❌ Erro ao finalizar sessão:", error.message);
+      console.error("❌ Erro ao finalizar coleta:", error.message);
       throw error;
     }
   },
 
-  // 8. Obter predição da IA para uma sessão
-  getPrediction: async (sessionId) => {
+  getUserSessions: async (userEmail) => {
     try {
-      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
+      const response = await fetch(`${AI_BASE_URL}/sessions/user/${userEmail}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`Erro: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
-      console.error("❌ Erro ao obter predição:", error.message);
+      console.error("❌ Erro ao buscar sessões:", error.message);
       throw error;
     }
   },
 
-  // 9. Listar todos os usuários (Admin)
+  // 6. Listar todos os usuários (Admin)
   getAllUsers: async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/usuarios`, {
@@ -252,84 +250,6 @@ export const apiService = {
       throw error;
     }
   },
-
-  // 7. Enviar telemetria em lote para uma sessão
-  sendTelemetryBatch: async (sessionId, telemetryData) => {
-    try {
-      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/telemetry`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telemetry_data: telemetryData })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error("❌ Erro ao enviar telemetria em lote:", error.message);
-      throw error;
-    }
-  },
-
-  // 8. Finalizar coleta de dados e obter predição
-  completeDataCollection: async (sessionId, feedback = null) => {
-    try {
-      const body = feedback ? { user_feedback: feedback.user_feedback, difficulty_rating: feedback.difficulty_rating } : {};
-      
-      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error("❌ Erro ao finalizar sessão:", error.message);
-      throw error;
-    }
-  },
-
-  // 9. Obter predição da IA para uma sessão
-  getPrediction: async (sessionId) => {
-    try {
-      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error("❌ Erro ao obter predição:", error.message);
-      throw error;
-    }
-  },
-
-  // 10. Buscar sessões do usuário com análise da IA
-  getUserSessions: async (userId) => {
-    try {
-      const response = await fetch(`${AI_BASE_URL}/sessions/user/${userId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("[IA] Erro ao buscar sessões:", error);
-      return { user_id: userId, total_sessions: 0, sessions: [] };
-    }
-  }
 };
 
 window.apiService = apiService;

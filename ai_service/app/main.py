@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import torch
@@ -31,21 +33,40 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Handler para erros de validação (422)
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """
+    Handler customizado para erros 422 - mostra exatamente qual campo está errado
+    """
+    errors = exc.errors()
+    print("[ERRO] Validação 422:")
+    print(f"[URL] {request.url}")
+    print(f"[DETALHES] Erros: {errors}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": errors,
+            "message": "Erro de validação: verifique o formato dos dados enviados. Esperado: List[TelemetryPoint] com campos {timestamp, position: {x, y, z}, instrument_id, velocity}"
+        }
+    )
+
 # Inicializa banco de dados (PostgreSQL no Render)
 @app.on_event("startup")
 async def startup_event():
     """Inicializa recursos na inicialização"""
     if IS_PRODUCTION:
-        print("🚀 Iniciando em modo PRODUÇÃO (Render)")
-        print("📊 Inicializando PostgreSQL...")
+        print("[PROD] Iniciando em modo PRODUÇÃO (Render)")
+        print("[DB] Inicializando PostgreSQL...")
         try:
             init_database()
-            print("✅ PostgreSQL inicializado com sucesso")
+            print("[OK] PostgreSQL inicializado com sucesso")
         except Exception as e:
-            print(f"❌ Erro ao inicializar PostgreSQL: {e}")
+            print(f"[ERRO] Erro ao inicializar PostgreSQL: {e}")
     else:
-        print("💻 Iniciando em modo LOCAL (desenvolvimento)")
-        print("📁 Dados serão salvos em dataset/collected_data/")
+        print("[LOCAL] Iniciando em modo LOCAL (desenvolvimento)")
+        print("[DATASET] Dados serão salvos em dataset/collected_data/")
 
 # Configurar CORS para permitir requisições do frontend
 app.add_middleware(
@@ -129,6 +150,12 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
     Adiciona pontos de telemetria
     """
     try:
+        # Debug: mostrar estrutura dos dados recebidos
+        print(f"[TELEMETRIA] Recebendo para sessão {session_id}")
+        print(f"[PONTOS] Total: {len(points)}")
+        if points:
+            print(f"[SAMPLE] Primeiro ponto: {points[0]}")
+        
         data_collector.add_telemetry_batch(session_id, points)
         return {
             "status": "success",
@@ -136,8 +163,12 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
             "message": "Telemetria adicionada"
         }
     except ValueError as e:
+        print(f"[ERRO] Sessão não encontrada - {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        print(f"[ERRO] Erro ao adicionar telemetria: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -225,53 +256,64 @@ async def get_user_sessions(user_id: str):
     # Processa cada sessão e adiciona análise da IA
     results = []
     for session in sessions:
-        session_data = session.get("session_data", {})
-        
-        # Calcula métricas básicas
-        economy = session_data.get("economy_of_motion", 0)
-        smoothness = session_data.get("smoothness_score", 0)
-        avg_velocity = session_data.get("avg_velocity", 0)
-        
-        # Tentar predição com o modelo LSTM (se houver dados suficientes)
-        predicted_skill = None
-        telemetry = session_data.get("telemetry_data", [])
-        
-        if len(telemetry) >= 10 and predictor:
-            try:
-                points = [TelemetryPoint(**p) for p in telemetry]
-                prediction = predictor.predict_quality(points)
-                predicted_skill = prediction.get("skill_level")
-            except Exception as e:
-                print(f"Erro na predição para {session['session_id']}: {e}")
-        
-        # Determina status baseado nas métricas
-        status = "Completed"
-        if predicted_skill:
-            status = f"Skill Level: {predicted_skill}"
-        elif smoothness > 0.02:
-            status = "Needs Improvement"
-        elif economy > 1000:
-            status = "Check Efficiency"
-        else:
+        try:
+            session_data = session.get("session_data", {})
+            
+            # Calcula métricas básicas (com defaults seguros)
+            economy = session_data.get("economy_of_motion") or 0
+            smoothness = session_data.get("smoothness_score") or 0
+            avg_velocity = session_data.get("avg_velocity") or 0
+            
+            # Predição com LSTM (se houver dados suficientes)
+            predicted_skill = None
+            ai_confidence = None
+            telemetry = session_data.get("telemetry_data", [])
+            
+            if len(telemetry) >= 10:
+                try:
+                    prediction_service = get_prediction_service()
+                    if prediction_service.model is not None:
+                        prediction = prediction_service.predict(telemetry)
+                        if "quality_level" in prediction:
+                            predicted_skill = prediction["quality_level"]
+                            ai_confidence = prediction.get("model_confidence")
+                            # Usa smoothness da IA se disponível
+                            if prediction.get("smoothness_score") is not None:
+                                smoothness = prediction["smoothness_score"]
+                except Exception as e:
+                    print(f"Erro na predição LSTM: {e}")
+            
+            # Determina status baseado nas métricas
             status = "Good Performance"
-        
-        results.append({
-            "session_id": session["session_id"],
-            "date": session.get("created_at", "")[:10] if session.get("created_at") else "N/A",
-            "procedure_type": session["procedure_type"],
-            "mode": "3D Surgery" if "3d" in session["procedure_type"].lower() else "2D Simulator",
-            "score": f"{int(max(0, min(100, (1 - smoothness * 10) * 100)))}%",
-            "status": status,
-            "metrics": {
-                "economy_of_motion": round(economy, 2),
-                "smoothness_score": round(smoothness, 4),
-                "avg_velocity": round(avg_velocity, 2)
-            },
-            "ai_prediction": {
-                "skill_level": predicted_skill,
-                "confidence": None  # Pode adicionar confidence do modelo depois
-            }
-        })
+            if smoothness > 0.02:
+                status = "Needs Improvement"
+            elif economy > 1000:
+                status = "Check Efficiency"
+            
+            # Calcula score seguro
+            score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
+            
+            results.append({
+                "session_id": session.get("session_id"),
+                "date": (session.get("created_at", "")[:10] if session.get("created_at") else "N/A"),
+                "procedure_type": session.get("procedure_type", "unknown"),
+                "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
+                "score": f"{int(score_value)}%",
+                "status": status,
+                "metrics": {
+                    "economy_of_motion": round(economy, 2),
+                    "smoothness_score": round(smoothness, 4),
+                    "avg_velocity": round(avg_velocity, 2)
+                },
+                "ai_prediction": {
+                    "skill_level": predicted_skill,
+                    "confidence": ai_confidence,
+                    "quality_level": predicted_skill
+                }
+            })
+        except Exception as e:
+            print(f"Erro ao processar sessão: {e}")
+            continue
     
     return {
         "user_id": user_id,

@@ -238,13 +238,13 @@ export default function Dashboard() {
                     {result.metrics && !result.ai_prediction && (
                       <div className="mt-2 flex gap-3 text-xs text-muted">
                         <span title="Economy of Motion">
-                          📏 {result.metrics.economy_of_motion}
+                          {result.metrics.economy_of_motion}
                         </span>
                         <span title="Smoothness Score">
-                          🎯 {result.metrics.smoothness_score}
+                          {result.metrics.smoothness_score}
                         </span>
                         <span title="Average Velocity">
-                          ⚡ {result.metrics.avg_velocity}
+                          {result.metrics.avg_velocity}
                         </span>
                       </div>
                     )}

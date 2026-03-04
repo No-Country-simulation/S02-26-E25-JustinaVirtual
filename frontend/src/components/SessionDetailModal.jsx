@@ -145,7 +145,7 @@ export default function SessionDetailModal({ session, onClose }) {
           {/* Score e Status (dados antigos) */}
           {(session.score || session.status) && (
             <div>
-              <h3 className="text-lg font-semibold mb-3">📈 Avaliação Geral</h3>
+              <h3 className="text-lg font-semibold mb-3">Avaliação Geral</h3>
               <div className="grid grid-cols-2 gap-3">
                 {session.score && (
                   <div className="bg-background p-3 rounded-lg">
