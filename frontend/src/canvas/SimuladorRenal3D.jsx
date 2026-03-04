@@ -26,6 +26,8 @@ export default function SimuladorRenal3D() {
   const [sessionId, setSessionId] = useState(null);
   const telemetryBuffer = useRef([]);
   const isFinalized = useRef(false);
+  const sessionStartTime = useRef(null);
+  const lastTelemetryCapture = useRef(0); // Para throttling da captura contínua
 
   // Refs de lógica
   const staplerRef = useRef(0);
@@ -57,6 +59,7 @@ export default function SimuladorRenal3D() {
           const user = JSON.parse(dadosSalvos);
           const response = await apiService.startDataCollection(user.email, "renal_surgery_3d");
           setSessionId(response.session_id);
+          sessionStartTime.current = Date.now(); // Marca o início
         }
       } catch (error) {
         console.error("Erro ao iniciar coleta:", error);
@@ -101,17 +104,6 @@ export default function SimuladorRenal3D() {
       setErrors(errorsRef.current);
     }
     setSessionLog([...logRef.current]);
-
-    // Registra evento para análise
-    const telemetryPoint = {
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      z: Math.random() * 10,
-      timestamp: Date.now(),
-      event_type: type,
-      event_status: status
-    };
-    telemetryBuffer.current.push(telemetryPoint);
   };
 
   const calculateAccuracy = () => {
@@ -173,7 +165,6 @@ export default function SimuladorRenal3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x020202);
 
-    // Camera: Near plane reduzido para 0.01 para permitir zoom extremo sem "atravessar" a geometria
     const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 10000);
     camera.position.set(60, 40, 60);
 
@@ -182,12 +173,8 @@ export default function SimuladorRenal3D() {
     mountRef.current.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    
-    // CORREÇÃO: enableDamping false remove o efeito de deslize residual do mouse
-    controls.enableDamping = false; 
-    
-    // AJUSTE DE ZOOM: minDistance reduzido para 1 para permitir chegar muito perto
-    controls.minDistance = 1; 
+    controls.enableDamping = false;
+    controls.minDistance = 1;
     controls.maxDistance = 500;
     controls.target.set(0, 0, 0);
 
@@ -378,6 +365,20 @@ export default function SimuladorRenal3D() {
           t.position.copy(inter[0].point);
           t.lookAt(camera.position);
           t.rotateZ(rotationRef.current);
+          
+          // Captura contínua de telemetria (5 Hz)
+          const now = Date.now();
+          if (sessionStartTime.current && now - lastTelemetryCapture.current >= 200) {
+            const timestampSeconds = (now - sessionStartTime.current) / 1000;
+            const point = inter[0].point;
+            telemetryBuffer.current.push({
+              timestamp: timestampSeconds,
+              position: { x: point.x, y: point.y, z: point.z },
+              instrument_id: "surgical_tool",
+              velocity: null
+            });
+            lastTelemetryCapture.current = now;
+          }
         } else t.visible = false;
       } else {
         // Se não há ferramenta ativa, esconde ambas

@@ -193,6 +193,65 @@ export const apiService = {
     }
   },
 
+  sendTelemetryBatch: async (sessionId, telemetryPoints) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/telemetry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(telemetryPoints),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao enviar telemetria:", error.message);
+      throw error;
+    }
+  },
+
+  completeDataCollection: async (sessionId, userFeedback = null, difficultyRating = null) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/${sessionId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_feedback: userFeedback,
+          difficulty_rating: difficultyRating,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao finalizar coleta:", error.message);
+      throw error;
+    }
+  },
+
+  getUserSessions: async (userEmail) => {
+    try {
+      const response = await fetch(`${AI_BASE_URL}/sessions/user/${userEmail}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erro ao buscar sessões:", error.message);
+      throw error;
+    }
+  },
+
   // 6. Listar todos os usuários (Admin)
   getAllUsers: async () => {
     try {
