@@ -46,7 +46,7 @@ public class TelemetriaDatabaseAdapter implements ITelemetriaRepositoryPort {
         }
         
         // telemetriaRepo.saveAll(movimentos);
-        System.out.println("⚠️ COMPILAÇÃO: Dados recebidos (Persistência pausada para ajuste de Usuário)");
+        System.out.println("COMPILAÇÃO: Dados recebidos (Persistência pausada para ajuste de Usuário)");
     }
 
     @Override
