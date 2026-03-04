@@ -8,6 +8,7 @@ import AppLayout from "./layouts/AppLayout";
 // Páginas
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Perfil from "./pages/Perfil";
 import Dashboard from "./pages/Dashboard";
 import TrainingSessionPage from "./pages/TrainingSessionPage";
 import Simulator from "./pages/Simulator"; 
@@ -21,7 +22,7 @@ export default function App() {
         <Routes>
 
           {/* Rota Pública */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />          
 
           {/* Layout Principal com Proteção */}
           <Route element={<AppLayout />}>
@@ -34,6 +35,7 @@ export default function App() {
             <Route element={<PrivateRoute />}>
               
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/perfil" element={<Perfil />} />
 
               {/* Módulos de Treinamento */}
               <Route path="/treinamento" element={<TrainingSessionPage />} />

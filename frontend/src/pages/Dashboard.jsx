@@ -73,10 +73,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
-          <button onClick={logout} className="mt-6 md:mt-0 px-8 py-3 bg-red-500/5 hover:bg-red-500 border border-red-500/20 hover:border-red-400 text-red-500 hover:text-white text-[9px] font-black uppercase tracking-[0.4em] transition-all rounded-xl">
-            [ ENCERRAR SESSÃO ]
-          </button>
+                 
         </header>
 
         <div className="grid lg:grid-cols-3 gap-8">
