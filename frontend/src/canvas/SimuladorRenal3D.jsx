@@ -279,12 +279,23 @@ export default function SimuladorRenal3D() {
         const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
         let marker;
 
+        // CORREÇÃO: Sempre criar o marcador visual, independente do resultado
         if (toolRef.current === 5 && staplerRef.current < MAX_STAPLERS) {
-          marker = new THREE.Mesh(new THREE.BoxGeometry(2, 0.4, 4), new THREE.MeshStandardMaterial({ color: 0x00f2ff }));
+          // Cria o marcador primeiro (sempre aparece)
+          marker = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 0.4, 4), 
+            new THREE.MeshStandardMaterial({ 
+              color: 0x00f2ff,
+              emissive: 0x0066aa,
+              emissiveIntensity: 0.3
+            })
+          );
+          
           staplerRef.current++;
           setStaplerCount(staplerRef.current);
 
-          if (targetName.includes("artery") || targetName.includes("vein")) {
+          // CORREÇÃO: Verifica se é artéria, veia OU ureter (amarelo)
+          if (targetName.includes("artery") || targetName.includes("vein") || targetName.includes("ureter")) {
             clampedRef.current = true;
             setIsVascularClamped(true);
             setMessage("SUCESSO: Fluxo vascular interrompido.");
@@ -295,18 +306,30 @@ export default function SimuladorRenal3D() {
           }
         } 
         else if (toolRef.current === 6 && cutRef.current < MAX_CUTS) {
+          // Cria o marcador primeiro (sempre aparece)
+          marker = new THREE.Mesh(
+            new THREE.BoxGeometry(0.2, 1.5, 5), 
+            new THREE.MeshStandardMaterial({ 
+              color: 0xff0055,
+              emissive: 0x440000,
+              emissiveIntensity: 0.5
+            })
+          );
+          
+          cutRef.current++;
+          setCutCount(cutRef.current);
+
+          // CORREÇÃO: Verifica se é artéria, veia OU ureter (amarelo)
           if (!clampedRef.current) {
             setMessage("ERRO CRÍTICO: Hemorragia severa detectada!");
             recordEvent('CUTTING', 'Corte realizado sem clampeamento vascular', 'ERROR');
           } else {
-            marker = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 5), new THREE.MeshStandardMaterial({ color: 0xff0055 }));
-            cutRef.current++;
-            setCutCount(cutRef.current);
             setMessage("CORTE REALIZADO: Tecido removido.");
             recordEvent('CUTTING', `Corte de precisão em: ${targetName}`, 'SUCCESS');
           }
         }
 
+        // CORREÇÃO: Posiciona o marcador se ele foi criado
         if (marker) {
           marker.position.copy(hit.point).add(n.multiplyScalar(0.1));
           marker.lookAt(hit.point.clone().add(n));
@@ -317,8 +340,21 @@ export default function SimuladorRenal3D() {
     };
 
     const handleKey = (e) => {
-      if (e.key === "5") { toolRef.current = 5; setActiveTool(5); }
-      if (e.key === "6") { toolRef.current = 6; setActiveTool(6); }
+      // NOVA FUNÇÃO: Tecla 4 para desativar a ferramenta atual
+      if (e.key === "4") { 
+        toolRef.current = null; 
+        setActiveTool(null);
+        staplerTool.visible = false;
+        cutterTool.visible = false;
+      }
+      if (e.key === "5") { 
+        toolRef.current = 5; 
+        setActiveTool(5);
+      }
+      if (e.key === "6") { 
+        toolRef.current = 6; 
+        setActiveTool(6);
+      }
       if (e.key.toLowerCase() === "r") rotationRef.current += Math.PI / 8;
     };
 
@@ -343,6 +379,10 @@ export default function SimuladorRenal3D() {
           t.lookAt(camera.position);
           t.rotateZ(rotationRef.current);
         } else t.visible = false;
+      } else {
+        // Se não há ferramenta ativa, esconde ambas
+        staplerTool.visible = false;
+        cutterTool.visible = false;
       }
       controls.update();
       renderer.render(scene, camera);
@@ -389,10 +429,71 @@ export default function SimuladorRenal3D() {
         </div>
       </div>
 
-      <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", gap: "15px" }}>
-        <div style={{ padding: "12px 25px", borderRadius: "5px", background: activeTool === 5 ? "#00f2ff" : "#111", color: activeTool === 5 ? "#000" : "#666", fontWeight: "bold", border: "1px solid #333" }}>[5] GRAMPEADOR</div>
-        <div style={{ padding: "12px 25px", borderRadius: "5px", background: activeTool === 6 ? "#ff0055" : "#111", color: activeTool === 6 ? "#000" : "#666", fontWeight: "bold", border: "1px solid #333" }}>[6] BISTURI</div>
-        <div style={{ padding: "12px 25px", borderRadius: "5px", background: "#222", color: "#fff", fontWeight: "bold", border: "1px solid #333" }}>[R] GIRAR</div>
+      {/* NOVA DESCRIÇÃO: Barra de ferramentas com indicador visual e teclas */}
+      <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "15px" }}>
+          <div style={{ 
+            padding: "12px 25px", 
+            borderRadius: "5px", 
+            background: activeTool === 5 ? "#00f2ff" : "#111", 
+            color: activeTool === 5 ? "#000" : "#666", 
+            fontWeight: "bold", 
+            border: activeTool === 5 ? "2px solid #fff" : "1px solid #333",
+            boxShadow: activeTool === 5 ? "0 0 15px #00f2ff" : "none",
+            transition: "all 0.2s"
+          }}>
+            [5] GRAMPEADOR
+          </div>
+          <div style={{ 
+            padding: "12px 25px", 
+            borderRadius: "5px", 
+            background: activeTool === 6 ? "#ff0055" : "#111", 
+            color: activeTool === 6 ? "#000" : "#666", 
+            fontWeight: "bold", 
+            border: activeTool === 6 ? "2px solid #fff" : "1px solid #333",
+            boxShadow: activeTool === 6 ? "0 0 15px #ff0055" : "none",
+            transition: "all 0.2s"
+          }}>
+            [6] BISTURI
+          </div>
+          <div style={{ 
+            padding: "12px 25px", 
+            borderRadius: "5px", 
+            background: "#222", 
+            color: "#fff", 
+            fontWeight: "bold", 
+            border: "1px solid #333" 
+          }}>
+            [R] GIRAR
+          </div>
+          <div style={{ 
+            padding: "12px 25px", 
+            borderRadius: "5px", 
+            background: activeTool === null ? "#444" : "#222", 
+            color: activeTool === null ? "#fff" : "#666", 
+            fontWeight: "bold", 
+            border: activeTool === null ? "2px solid #fff" : "1px solid #333",
+            boxShadow: activeTool === null ? "0 0 15px #ffffff" : "none",
+            transition: "all 0.2s"
+          }}>
+            [4] PARAR USO
+          </div>
+        </div>
+        
+        {/* Indicador visual da ferramenta ativa */}
+        <div style={{ 
+          background: "rgba(0,0,0,0.6)", 
+          padding: "5px 15px", 
+          borderRadius: "20px",
+          border: "1px solid #333",
+          color: activeTool === 5 ? "#00f2ff" : activeTool === 6 ? "#ff0055" : "#888",
+          fontSize: "14px",
+          fontWeight: "bold"
+        }}>
+          {activeTool === 5 ? "🔵 FERRAMENTA ATIVA: Grampeador" : 
+           activeTool === 6 ? "🔴 FERRAMENTA ATIVA: Bisturi" : 
+           "⚪ NENHUMA FERRAMENTA ATIVA"}
+        </div>
       </div>
 
       <button 
