@@ -129,7 +129,7 @@ export default function Dashboard() {
                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Treinamento Teórico</h3>
                   <p className="text-slate-400 text-[11px] font-medium leading-relaxed mb-8 opacity-70">Revisão técnica de anatomia renal e tomada de decisão clínica.</p>
                   <div className="text-purple-400 text-[9px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                    {isAdmin ? 'INICIAR ESTUDOS' : 'INICIAR TREINAMENTO TEÓRICO'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                    {isAdmin ? 'INICIAR ESTUDOS' : 'INICIAR TREINAMENTO TEÓRICO'} <span className="group-hover:translate-x-3 transition-transform duration-500">{">>>"}</span>
                   </div>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function Dashboard() {
                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Simulador 3D</h3>
                   <p className="text-slate-400 text-[11px] font-medium leading-relaxed mb-8 opacity-70">Ambiente imersivo de nefrectomia robótica com telemetria analítica em tempo real.</p>
                   <div className="text-blue-400 text-[9px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                    {isAdmin ? 'INICIAR SIMULAÇÃO' : 'ACESSAR SALA DE TREINAMENTO'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                    {isAdmin ? 'INICIAR SIMULAÇÃO' : 'ACESSAR SALA DE TREINAMENTO'} <span className="group-hover:translate-x-3 transition-transform duration-500">{">>>"}</span>
                   </div>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function Dashboard() {
                   <h3 className="text-lg font-black text-slate-400 uppercase italic tracking-tighter mb-2 group-hover:text-slate-200">Terminal 2D (BASE) </h3>
                   <p className="text-slate-500 text-[10px] font-medium leading-relaxed mb-8 opacity-60 group-hover:opacity-80">Acesso rápido aos protocolos de telemetria e validação 2D.</p>
                   <div className="text-slate-600 group-hover:text-slate-400 text-[8px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                    EXCUTAR TELEMETRIA BASE <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                    EXCUTAR TELEMETRIA BASE <span className="group-hover:translate-x-3 transition-transform duration-500">{">>>"}</span>
                   </div>
                 </div>
               </div>
