@@ -165,7 +165,6 @@ export default function SimuladorRenal3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x020202);
 
-    // Camera: Near plane reduzido para 0.01 para permitir zoom extremo sem "atravessar" a geometria
     const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 10000);
     camera.position.set(60, 40, 60);
 
@@ -174,12 +173,8 @@ export default function SimuladorRenal3D() {
     mountRef.current.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    
-    // CORREÇÃO: enableDamping false remove o efeito de deslize residual do mouse
-    controls.enableDamping = false; 
-    
-    // AJUSTE DE ZOOM: minDistance reduzido para 1 para permitir chegar muito perto
-    controls.minDistance = 1; 
+    controls.enableDamping = false;
+    controls.minDistance = 1;
     controls.maxDistance = 500;
     controls.target.set(0, 0, 0);
 

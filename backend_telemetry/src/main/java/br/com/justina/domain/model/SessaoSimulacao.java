@@ -27,7 +27,7 @@ public class SessaoSimulacao {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cirurgia_id", nullable = false)
     @NotNull(message = "Toda sessão deve estar vinculada a um procedimento cirúrgico.")
-    private Cirurgia cirurgia;
+    private Cirurgia cirurgia; // MANTIDO!
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataInicio;
@@ -46,6 +46,9 @@ public class SessaoSimulacao {
     // --- (Resultados da IA) ---
     private String statusIa;
     private Double precisaoIa;
+    
+    // --- NOVO CAMPO (Adicionado agora) ---
+    private String relatorioUrl;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
