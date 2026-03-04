@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="32"
+     height="32"
+     viewBox="0 0 32 32"
+     fill="white">
+
+  <!-- Move blade so tip is at top-left area -->
+  <path d="M4 28l4-4 4 4-4 4-4-4zm6-8l12-12 2 2-12 12-2-2z"/>
+</svg>
