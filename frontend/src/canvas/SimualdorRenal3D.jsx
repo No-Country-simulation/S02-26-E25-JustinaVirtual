@@ -27,6 +27,7 @@ export default function SimuladorRenal3D() {
   const telemetryBuffer = useRef([]);
   const isFinalized = useRef(false);
   const sessionStartTime = useRef(null);
+  const lastTelemetryCapture = useRef(0); // Para throttling da captura contínua
 
   // Refs de lógica
   const staplerRef = useRef(0);
@@ -103,22 +104,6 @@ export default function SimuladorRenal3D() {
       setErrors(errorsRef.current);
     }
     setSessionLog([...logRef.current]);
-
-    // Registra evento para análise (formato correto da API)
-    if (sessionStartTime.current) {
-      const timestampSeconds = (Date.now() - sessionStartTime.current) / 1000;
-      const telemetryPoint = {
-        timestamp: timestampSeconds,
-        position: {
-          x: Math.random() * 100,
-          y: Math.random() * 100,
-          z: Math.random() * 10
-        },
-        instrument_id: "surgical_tool",
-        velocity: null
-      };
-      telemetryBuffer.current.push(telemetryPoint);
-    }
   };
 
   const calculateAccuracy = () => {
@@ -349,6 +334,20 @@ export default function SimuladorRenal3D() {
           t.position.copy(inter[0].point);
           t.lookAt(camera.position);
           t.rotateZ(rotationRef.current);
+          
+          // Captura contínua de telemetria (5 Hz)
+          const now = Date.now();
+          if (sessionStartTime.current && now - lastTelemetryCapture.current >= 200) {
+            const timestampSeconds = (now - sessionStartTime.current) / 1000;
+            const point = inter[0].point;
+            telemetryBuffer.current.push({
+              timestamp: timestampSeconds,
+              position: { x: point.x, y: point.y, z: point.z },
+              instrument_id: "surgical_tool",
+              velocity: null
+            });
+            lastTelemetryCapture.current = now;
+          }
         } else t.visible = false;
       }
       controls.update();
