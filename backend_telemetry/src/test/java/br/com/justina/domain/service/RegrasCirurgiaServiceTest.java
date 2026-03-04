@@ -1,12 +1,13 @@
 package br.com.justina.domain.service;
 
 import br.com.justina.application.services.RegrasCirurgiaService;
-import br.com.justina.domain.exception.RegraCirurgiaException;
 import br.com.justina.domain.model.Cirurgia;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.StatusSessao;
 import br.com.justina.domain.model.Telemetria;
 import br.com.justina.domain.model.ZonaProibida;
+import br.com.justina.infrastructure.exception.RegraCirurgiaException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

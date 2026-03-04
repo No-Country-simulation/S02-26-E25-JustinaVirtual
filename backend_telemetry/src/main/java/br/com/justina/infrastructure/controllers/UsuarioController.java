@@ -43,6 +43,7 @@ public class UsuarioController {
 
         return ResponseEntity.ok(new LoginResponse(
                 tokenReal,
+                usuario.getId(),
                 usuario.getName(),
                 usuario.getEmail(),
                 usuario.getRole().name()

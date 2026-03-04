@@ -9,6 +9,7 @@ public record RegisterRequest(
         @NotBlank String name,
         @Email @NotBlank String email,
         @NotBlank String password,
-        Role role
+        Role role,
+        String crm
 
 ) {}
