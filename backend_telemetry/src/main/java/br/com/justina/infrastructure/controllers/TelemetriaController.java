@@ -1,8 +1,9 @@
 package br.com.justina.infrastructure.controllers;
 
 import br.com.justina.application.dto.AnaliseRequest;
-import br.com.justina.application.dto.AsyncResponseDTO; 
-import br.com.justina.application.usecases.FinalizarCirurgiaUseCase; 
+import br.com.justina.application.dto.AsyncResponseDTO;
+import br.com.justina.application.usecases.ConsultarResultadoUseCase; // <--- NOVO
+import br.com.justina.application.usecases.FinalizarCirurgiaUseCase;
 import br.com.justina.application.usecases.RegistrarMovimentoUseCase;
 import br.com.justina.domain.model.FeedbackIA;
 import br.com.justina.infrastructure.dto.FinalizarCirurgiaDTO;
@@ -14,6 +15,8 @@ import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @Slf4j
 @RestController
 @RequestMapping("/telemetria")
@@ -23,10 +26,10 @@ import org.springframework.web.bind.annotation.*;
 public class TelemetriaController {
 
     private final RegistrarMovimentoUseCase registrarMovimentoUseCase;
-    // Troquei para o UseCase que preparei com @Async
-    private final FinalizarCirurgiaUseCase finalizarCirurgiaUseCase; 
+    private final FinalizarCirurgiaUseCase finalizarCirurgiaUseCase;
+    private final ConsultarResultadoUseCase consultarResultadoUseCase; // <--- INJEÇÃO NOVA
 
-    // --- ENDPOINT PRINCIPAL (MANTIDO IGUAL) ---
+    // --- ENDPOINT PRINCIPAL (MANTIDO) ---
     @Operation(summary = "Receber movimentos de telemetria", description = "Recebe um batch de movimentos com ID do usuário, processa via IA e persiste.")
     @PostMapping("/analisar")
     public ResponseEntity<?> receberMovimentos(@RequestBody AnaliseRequest request) {
@@ -47,7 +50,6 @@ public class TelemetriaController {
             return ResponseEntity.ok(feedback);
 
         } catch (Exception e) {
-            // MODO RESGATE HACKATHON (MANTIDO)
             log.error("ERRO DE PERSISTÊNCIA (BLOQUEADO): {}", e.getMessage());
             FeedbackIA feedbackSeguro = new FeedbackIA();
             feedbackSeguro.setStatus("SUCESSO");
@@ -58,12 +60,10 @@ public class TelemetriaController {
         }
     }
 
-    // --- ENDPOINT FINALIZAR (MODO ASSÍNCRONO) ---
+    // --- ENDPOINT FINALIZAR (MANTIDO) ---
     @Operation(summary = "Finalizar cirurgia", description = "Inicia o processamento do relatório em background e retorna imediatamente.")
-    @PostMapping("/finalizar") 
-    // Nota: Mantivem o padrão de receber o DTO no corpo para compatibilidade com o UseCase
+    @PostMapping("/finalizar")
     public ResponseEntity<AsyncResponseDTO> finalizarCirurgia(@RequestBody FinalizarCirurgiaDTO dto) {
-        
         if (dto == null || dto.getSessaoId() == null) {
             log.error("Tentativa de finalizar cirurgia com payload inválido");
             return ResponseEntity.badRequest().build();
@@ -72,15 +72,19 @@ public class TelemetriaController {
         MDC.put("sessionId", dto.getSessaoId().toString());
         try {
             log.info("Requisição de finalização assíncrona recebida");
-
-            // Chama o UseCase e recebe o recibo (AsyncResponseDTO)
             AsyncResponseDTO resposta = finalizarCirurgiaUseCase.executar(dto.getSessaoId(), dto);
-            
-            // Retorna 202 ACCEPTED (Isso libera o frontend na hora!)
             return ResponseEntity.accepted().body(resposta);
-
         } finally {
             MDC.remove("sessionId");
         }
+    }
+
+    // --- ENDPOINT CONSULTAR RESULTADO ---
+    @Operation(summary = "Consultar status do relatório", description = "Endpoint para polling: Verifica se a IA já terminou de gerar o PDF.")
+    @GetMapping("/resultado/{sessaoId}")
+    public ResponseEntity<AsyncResponseDTO> consultarResultado(@PathVariable UUID sessaoId) {
+        
+        AsyncResponseDTO resposta = consultarResultadoUseCase.executar(sessaoId);
+        return ResponseEntity.ok(resposta);
     }
 }
