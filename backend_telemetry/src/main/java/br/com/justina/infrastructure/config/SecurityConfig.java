@@ -72,6 +72,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:5173",
+                "https://s02-26-e25-test.vercel.app",
                 "https://s02-26-e25-justina-virtual.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

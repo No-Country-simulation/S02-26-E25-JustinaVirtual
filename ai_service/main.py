@@ -27,6 +27,7 @@ app.add_middleware(
         "http://localhost:5174",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
+        "https://s02-26-e25-test.vercel.app",
         "https://s02-26-e25-justina-virtual.vercel.app"
     ],
     allow_credentials=True,
