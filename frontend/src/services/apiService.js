@@ -57,6 +57,29 @@ export const apiService = {
         throw error;
       }
     },
+    // Atualizar perfil do usuário logado
+    updateProfile: async (data) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/usuarios/me`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `Erro: ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error("❌ Erro ao atualizar perfil:", error.message);
+        throw error;
+      }
+    },
 
   // 2. Envio de Telemetria
   sendTelemetry: async (payload) => {
