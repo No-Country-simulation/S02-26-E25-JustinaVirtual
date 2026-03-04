@@ -94,28 +94,43 @@ export default function Dashboard() {
                   <div className="h-14 w-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/20 text-purple-400">
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                   </div>
-                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Protocolos Teóricos</h3>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Treinamento Teórico</h3>
                   <p className="text-slate-400 text-[11px] font-medium leading-relaxed mb-8 opacity-70">Revisão técnica de anatomia renal e tomada de decisão clínica.</p>
                   <div className="text-purple-400 text-[9px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                    {isAdmin ? 'VISUALIZAR MATERIAL' : 'INICIAR TREINAMENTO TEÓRICO'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                    {isAdmin ? 'INICIAR ESTUDOS' : 'INICIAR TREINAMENTO TEÓRICO'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
                   </div>
                 </div>
               </div>
 
               {/* SIMULADOR 3D */}
               <div onClick={() => navigate("/simulador-3d")} 
-                className="group relative bg-slate-900/60 border-2 border-blue-500/10 p-8 rounded-[2.5rem] cursor-pointer hover:border-blue-400/60 transition-all duration-500 overflow-hidden shadow-2xl">
+                className="group relative bg-slate-900/60 border-2 border-blue-500/30 p-8 rounded-[2.5rem] cursor-pointer hover:border-blue-400 transition-all duration-500 overflow-hidden shadow-2xl ring-1 ring-blue-500/20">
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-6">
                     <div className="h-14 w-14 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/40 text-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.3)]">
                       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"/></svg>
                     </div>
-                    <span className="px-3 py-1 bg-blue-600 text-[8px] font-black text-white rounded-lg uppercase animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.5)]">SISTEMA ONLINE</span>
+                    <span className="px-3 py-1 bg-blue-600 text-[8px] font-black text-white rounded-lg uppercase animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.5)]">AMBIENTE IMERSIVO</span>
                   </div>
                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Simulador 3D</h3>
-                  <p className="text-slate-400 text-[11px] font-medium leading-relaxed mb-8 opacity-70">Ambiente imersivo de nefrectomia robótica com telemetria em tempo real.</p>
+                  <p className="text-slate-400 text-[11px] font-medium leading-relaxed mb-8 opacity-70">Ambiente imersivo de nefrectomia robótica com telemetria analítica em tempo real.</p>
                   <div className="text-blue-400 text-[9px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                    {isAdmin ? 'MODO DEMONSTRAÇÃO' : 'ACESSAR CABINE'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                    {isAdmin ? 'INICIAR SIMULAÇÃO' : 'ACESSAR SALA DE TREINAMENTO'} <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SIMULADOR 2D  */}
+              <div onClick={() => navigate("/simulador-2d")} 
+                className="group relative bg-slate-900/20 border border-white/5 p-8 rounded-[2.5rem] cursor-pointer hover:bg-slate-800/40 hover:border-slate-500/30 transition-all duration-500 overflow-hidden shadow-lg opacity-80 hover:opacity-100">
+                <div className="relative z-10">
+                  <div className="h-14 w-14 bg-slate-700/20 rounded-2xl flex items-center justify-center mb-6 border border-white/10 text-slate-500 group-hover:text-slate-300">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-400 uppercase italic tracking-tighter mb-2 group-hover:text-slate-200">Terminal 2D (BASE) </h3>
+                  <p className="text-slate-500 text-[10px] font-medium leading-relaxed mb-8 opacity-60 group-hover:opacity-80">Acesso rápido aos protocolos de telemetria e validação 2D.</p>
+                  <div className="text-slate-600 group-hover:text-slate-400 text-[8px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                    EXCUTAR TELEMETRIA BASE <span className="group-hover:translate-x-3 transition-transform duration-500">>>></span>
                   </div>
                 </div>
               </div>
@@ -240,7 +255,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* MODAL DE FEEDBACK (O VERDADEIRO TOQUE HUMANO E PROFISSIONAL) */}
+      {/* MODAL DE FEEDBACK */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-black/80">
           <div className="bg-[#0f172a] border border-blue-500/30 w-full max-w-md rounded-[3rem] p-10 relative shadow-[0_0_80px_rgba(30,58,138,0.5)]">

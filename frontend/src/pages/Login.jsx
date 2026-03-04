@@ -17,9 +17,8 @@ export default function Login() {
     setError(null);
 
     try {        
-      const data = await apiService.loginUser({ email, password });
+      const data = await apiService.loginUser({ email, password });      
       
-      // O Back deve retornar { token, role, name, id }
       localStorage.setItem('token', data.token);    
       localStorage.setItem('justina_user', JSON.stringify(data));
 
