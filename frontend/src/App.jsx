@@ -10,9 +10,9 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TrainingSessionPage from "./pages/TrainingSessionPage";
-import Simulator from "./pages/Simulator";
+import Simulator from "./pages/Simulator"; 
 import Library from "./pages/Library";
-import SimuladorRenal3D from "./canvas/SimualdorRenal3D";
+import SimuladorRenal3D from "./canvas/SimuladorRenal3D"; 
 
 export default function App() {
   return (
@@ -20,29 +20,33 @@ export default function App() {
       <TrainingSessionProvider>
         <Routes>
 
-          {/* Login fora do layout */}
+          {/* Rota Pública */}
           <Route path="/login" element={<Login />} />
 
-          {/* Layout principal */}
+          {/* Layout Principal com Proteção */}
           <Route element={<AppLayout />}>
-
+            
+            {/* Rota Raiz */}
             <Route path="/" element={<Home />} />
             <Route path="/library" element={<Library />} />
 
-            {/* Rotas protegidas */}
+            {/* Todas as rotas abaixo exigem Login (PrivateRoute) */}
             <Route element={<PrivateRoute />}>
-
+              
               <Route path="/dashboard" element={<Dashboard />} />
 
-              {/* Mantendo as duas versões */}
-              <Route path="/training" element={<TrainingSessionPage />} />
+              {/* Módulos de Treinamento */}
               <Route path="/treinamento" element={<TrainingSessionPage />} />
+              <Route path="/training" element={<TrainingSessionPage />} />
 
-              <Route path="/simulator" element={<Simulator />} />
+              {/* SIMULADOR 3D */}
               <Route path="/simulador-3d" element={<SimuladorRenal3D />} />
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* SIMULADOR 2D*/}              
+              <Route path="/simulador-2d" element={<Simulator />} />
+
+              {/* Se o usuário digitar qualquer rota errada estando logado, volta pro Dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
             </Route>
           </Route>
