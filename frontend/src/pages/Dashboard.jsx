@@ -166,7 +166,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
->>>>>>> upstream/dev
             </div>
 
             {/* SEÇÃO DINÂMICA: GESTÃO (ADMIN) OU OBJETIVOS (USER) */}
