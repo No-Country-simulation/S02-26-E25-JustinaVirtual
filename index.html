@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Justina - Ambiente Cirúrgico</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            pointer-events: none;
+            max-width: 350px;
+            border-left: 5px solid #0088cc;
+        }
+        h1 { margin: 0 0 10px; font-size: 20px; color: #005580; }
+        p { margin: 5px 0; font-size: 14px; }
+        .status { font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        .waiting { background-color: #eee; color: #555; }
+        .recording { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .sending { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        .result-box { margin-top: 15px; border-top: 2px solid #ddd; padding-top: 10px; display: none; }
+        .approved { color: #28a745; font-weight: bold; }
+        .rejected { color: #dc3545; font-weight: bold; }
+        .alert { color: #ffc107; font-weight: bold; }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="info">
+        <h1>🏥 Justina Virtual v0.2</h1>
+        <p>Simulação de Incisão</p>
+        <p>Status: <span id="statusText" class="status waiting">Aguardando cirurgião...</span></p>
+        <p style="font-size: 12px; color: #666; margin-top: 10px;">
+            <i>Segure o <b>Botão Esquerdo</b> para cortar.</i>
+        </p>
+        
+        <div id="resultBox" class="result-box">
+            <p>📋 <b>Relatório da IA:</b></p>
+            <p>Diagnóstico: <span id="aiStatus"></span></p>
+            <p id="aiMessage" style="font-size: 13px; font-style: italic;"></p>
+            <p>Precisão do Movimento: <span id="aiScore" style="font-size: 18px; font-weight: bold;"></span></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- 1. CONFIGURAÇÃO DA CENA (AMBIENTE) ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f5f9); // Fundo "Branco Clínico"
+        // Adiciona uma névoa suave para profundidade
+        scene.fog = new THREE.Fog(0xf0f5f9, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 12); // Posição elevada
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true; // Sombras ativadas
+        document.body.appendChild(renderer.domElement);
+
+        // --- 2. ILUMINAÇÃO (LUZ DE SALA DE CIRURGIA) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const surgicalLight = new THREE.SpotLight(0xffffff, 0.8);
+        surgicalLight.position.set(0, 20, 5);
+        surgicalLight.castShadow = true;
+        surgicalLight.angle = 0.3;
+        surgicalLight.penumbra = 0.2;
+        scene.add(surgicalLight);
+
+        // --- 3. ELEMENTOS 3D (MESA, PELE, PANO) ---
+        
+        // A "Área de corte" (Área de Pele) - Quadrado Bege
+        const skinGeometry = new THREE.PlaneGeometry(8, 8);
+        const skinMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xeebb99, // Bege pele
+            specular: 0x111111,
+            shininess: 10,
+            side: THREE.DoubleSide 
+        }); 
+        const skin = new THREE.Mesh(skinGeometry, skinMaterial);
+        skin.rotation.x = -Math.PI / 2;
+        skin.receiveShadow = true;
+        scene.add(skin);
+
+        // O Campo Cirúrgico (Pano Azul) - Círculo ao redor
+        const drapeGeometry = new THREE.RingGeometry(4.1, 15, 64); // Furo interno de 4.1, raio externo 15
+        const drapeMaterial = new THREE.MeshLambertMaterial({ color: 0x0066aa, side: THREE.DoubleSide }); // Azul Cirúrgico
+        const drape = new THREE.Mesh(drapeGeometry, drapeMaterial);
+        drape.rotation.x = -Math.PI / 2;
+        drape.position.y = 0.01; // Levemente acima da pele para não piscar
+        drape.receiveShadow = true;
+        scene.add(drape);
+
+        // O Instrumento (Bisturi/Cilindro)
+        const toolGeometry = new THREE.CylinderGeometry(0.15, 0.1, 3, 16);
+        const toolMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+        const tool = new THREE.Mesh(toolGeometry, toolMaterial);
+        tool.rotation.x = -Math.PI / 2; // Deita o cilindro inicialmente
+        scene.add(tool); // Adicionamos à cena, mas vamos mover ele com o mouse
+
+        // Linha do Corte (Sangue)
+        const maxPoints = 1000;
+        const lineGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(maxPoints * 3);
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xcc0000, linewidth: 2 });
+        const cutLine = new THREE.Line(lineGeometry, lineMaterial);
+        cutLine.frustumCulled = false; // Evita que a linha suma em certos ângulos
+        scene.add(cutLine);
+
+        // --- 4. INTERAÇÃO E LÓGICA ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isCutting = false;
+        let cutPoints = [];
+        let lineIndex = 0;
+
+        function updateToolPosition(point) {
+            // O instrumento fica na posição do mouse, levemente inclinado
+            tool.position.copy(point);
+            tool.position.y += 1.5; // Levanta o cabo
+            tool.lookAt(point.x, 0, point.z); // Aponta para o corte
+            tool.rotation.x = -Math.PI / 4; // Inclinação da mão
+        }
+
+        function getIntersectPoint(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            // Só detectamos colisão com a PELE (skin), ignoramos o pano azul
+            const intersects = raycaster.intersectObject(skin);
+            return intersects.length > 0 ? intersects[0].point : null;
+        }
+
+        window.addEventListener('mousedown', (event) => {
+            if(event.button !== 0) return;
+            
+            // Verifica se clicou na pele
+            const point = getIntersectPoint(event);
+            if(!point) return;
+
+            isCutting = true;
+            cutPoints = [];
+            lineIndex = 0;
+            
+            // Limpa linha anterior
+            const positions = cutLine.geometry.attributes.position.array;
+            positions.fill(0);
+            cutLine.geometry.setDrawRange(0, 0);
+            
+            // UI Update
+            const statusText = document.getElementById('statusText');
+            statusText.innerText = "Realizando Incisão...";
+            statusText.className = "status recording";
+            document.getElementById('resultBox').style.display = 'none';
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            const point = getIntersectPoint(event);
+            
+            if (point) {
+                // Move o bisturi mesmo se não estiver cortando (tracking visual)
+                updateToolPosition(point);
+
+                if (isCutting) {
+                    // Lógica de gravação
+                    const dadosTelemetria = {
+                        eixoX: parseFloat(point.x.toFixed(4)),
+                        eixoY: parseFloat(point.z.toFixed(4)), // Z do 3D vira Y da Mesa
+                        eixoZ: -0.5,
+                        tempo: new Date().toISOString()
+                    };
+                    cutPoints.push(dadosTelemetria);
+
+                    // Desenha o rastro
+                    if (lineIndex < maxPoints) {
+                        const positions = cutLine.geometry.attributes.position.array;
+                        positions[lineIndex * 3] = point.x;
+                        positions[lineIndex * 3 + 1] = point.y + 0.02; // Levemente acima da pele
+                        positions[lineIndex * 3 + 2] = point.z;
+                        lineIndex++;
+                        cutLine.geometry.setDrawRange(0, lineIndex);
+                        cutLine.geometry.attributes.position.needsUpdate = true;
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isCutting) return;
+            isCutting = false;
+
+            const statusText = document.getElementById('statusText');
+            statusText.innerText = "Enviando dados para Backend...";
+            statusText.className = "status sending";
+
+            enviarParaBackend(cutPoints);
+        });
+
+        // --- 5. COMUNICAÇÃO COM JAVA ---
+        async function enviarParaBackend(dados) {
+            try {
+                if(dados.length === 0) return;
+
+                const response = await fetch('http://localhost:8081/api/telemetria/analisar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (!response.ok) throw new Error('Erro Java');
+                const feedback = await response.json();
+                mostrarResultado(feedback);
+
+            } catch (error) {
+                console.error(error);
+                const statusText = document.getElementById('statusText');
+                statusText.innerText = "Erro: Backend Offline";
+                statusText.style.backgroundColor = "#ffcccc";
+                statusText.style.color = "red";
+            }
+        }
+
+        function mostrarResultado(feedback) {
+            document.getElementById('statusText').innerText = "Análise Concluída";
+            document.getElementById('statusText').className = "status waiting";
+            document.getElementById('resultBox').style.display = 'block';
+            
+            const statusElem = document.getElementById('aiStatus');
+            statusElem.innerText = feedback.status;
+            
+            statusElem.className = feedback.status === 'APROVADO' ? 'approved' : 
+                                   feedback.status === 'ALERTA' ? 'alert' : 'rejected';
+
+            document.getElementById('aiMessage').innerText = feedback.mensagem;
+            document.getElementById('aiScore').innerText = (feedback.precisao * 100).toFixed(1) + "%";
+        }
+
+        // Ajuste de tela e Animação
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+    </script>
+</body>
+</html>
