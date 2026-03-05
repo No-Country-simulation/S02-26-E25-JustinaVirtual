@@ -1,14 +1,9 @@
-//------------ version 3 ------------
-// src/pages/TrainingSessionPage.jsx
 import { useEffect } from 'react';
 import { useTrainingSession } from '../contexts/TrainingSessionContext';
 import TrainingHUD from '../components/hud/TrainingHUD';
 import QuestionMultipleChoice from '../components/training/QuestionMultipleChoice';
 import ImagemRimPelveRenal from '../assets/ImagemRimPelveRenal.jpg';
-
-// const videoQuestions = [ /* unchanged */ ];
-// const imageQuestions = [ /* unchanged */ ];
-// const caseQuestions = [ /* unchanged */ ];
+import { useNavigate } from 'react-router-dom';
 
 const videoQuestions = [
   {
@@ -69,12 +64,11 @@ const caseQuestions = [
   }
 ];
 
-
-
 export default function TrainingSessionPage() {
   const video1 = "https://www.youtube.com/embed/fELn4Fe9Ccc";
   const imagem1 = ImagemRimPelveRenal;
   const context = useTrainingSession();
+  const navigate = useNavigate();
 
   if (!context) {
     return (
@@ -113,7 +107,7 @@ export default function TrainingSessionPage() {
 
   const allQuestionsAnswered = () => {
     const questions = getCurrentQuestions();
-    const answeredInStep = session.answers.filter(a => 
+    const answeredInStep = session.answers.filter(a =>
       questions.some(q => q.id === a.questionId)
     );
     return answeredInStep.length >= questions.length;
@@ -168,6 +162,22 @@ export default function TrainingSessionPage() {
           {description}
         </p>
 
+        {/* Botão de voltar ao dashboard */}
+        <div className="mb-6 flex justify-start">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="
+              px-6 py-3 rounded-xl text-base font-medium
+              bg-gray-200 hover:bg-gray-300
+              dark:bg-gray-800 dark:hover:bg-gray-700
+              text-gray-900 dark:text-white
+              transition
+            "
+          >
+            ← Voltar ao Dashboard
+          </button>
+        </div>
+
         {/* Etapa 1: Vídeo */}
         {currentStep === 0 && (
           <div className="mb-12 rounded-lg overflow-hidden aspect-video max-w-4xl mx-auto bg-black">
@@ -202,8 +212,8 @@ export default function TrainingSessionPage() {
               Caso clínico
             </h3>
             <p className="text-lg leading-relaxed text-gray-800 dark:text-gray-200">
-              Paciente masculino, 58 anos, tabagista, hipertenso, com achado incidental em tomografia 
-              de tumor sólido de 3,2 cm no polo inferior do rim direito, sem invasão de veia renal 
+              Paciente masculino, 58 anos, tabagista, hipertenso, com achado incidental em tomografia
+              de tumor sólido de 3,2 cm no polo inferior do rim direito, sem invasão de veia renal
               nem linfonodomegalias. Creatinina basal 0,9 mg/dL. Risco cirúrgico ASA II.
             </p>
           </div>

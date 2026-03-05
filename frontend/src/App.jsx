@@ -14,6 +14,7 @@ import TrainingSessionPage from "./pages/TrainingSessionPage";
 import Simulator from "./pages/Simulator"; 
 import Library from "./pages/Library";
 import SimuladorRenal3D from "./canvas/SimuladorRenal3D"; 
+import AdminDashboard from "./pages/AdminDashboard";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             {/* Rota Raiz */}
             <Route path="/" element={<Home />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/adminDashboard" element={<AdminDashboard/>} />
 
             {/* Todas as rotas abaixo exigem Login (PrivateRoute) */}
             <Route element={<PrivateRoute />}>
