@@ -175,25 +175,67 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
 @app.post("/sessions/{session_id}/complete")
 async def complete_session(session_id: str, request: SessionCompleteRequest):
     """
-    Finaliza sessão e salva dataset
-    
-    Calcula métricas automaticamente e salva arquivo JSON
+    Finaliza sessão, calcula métricas, faz predição LSTM e salva
     """
     try:
-        filepath = data_collector.complete_session(
+        # Primeiro: completa a sessão (calcula métricas básicas e retorna dados)
+        filepath, session_data = data_collector.complete_session(
             session_id=session_id,
             user_feedback=request.user_feedback,
             difficulty_rating=request.difficulty_rating
         )
+        
+        # Segundo: Faz predição LSTM com os dados de telemetria
+        try:
+            telemetry = session_data.get('telemetry_data', [])
+            
+            if len(telemetry) >= 2:
+                prediction_service = get_prediction_service()
+                prediction = prediction_service.predict(telemetry)
+                
+                print(f"[PREDIÇÃO] {session_id}: {prediction}")
+                
+                # Adiciona predição aos dados da sessão
+                session_data['ai_prediction'] = prediction
+                
+                # Atualiza no banco/arquivo com a predição
+                if IS_PRODUCTION:
+                    from app.database import save_session_to_db
+                    save_session_to_db(session_id, session_data)
+                    print(f"✅ Predição salva no PostgreSQL")
+                elif filepath:
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        json.dump(session_data, f, indent=2, default=str)
+                    print(f"✅ Predição salva em {filepath}")
+                
+                return {
+                    "status": "success",
+                    "session_id": session_id,
+                    "saved_to": str(filepath) if filepath else "PostgreSQL",
+                    "prediction": prediction,
+                    "message": "Sessão finalizada, predição calculada e salva"
+                }
+            else:
+                print(f"[AVISO] {session_id}: Dados insuficientes para predição ({len(telemetry)} pontos)")
+        
+        except Exception as pred_error:
+            print(f"[ERRO] Falha ao calcular predição para {session_id}: {pred_error}")
+            import traceback
+            traceback.print_exc()
+        
+        # Retorna sucesso mesmo sem predição
         return {
             "status": "success",
             "session_id": session_id,
-            "saved_to": str(filepath),
-            "message": "Sessão finalizada e salva com sucesso"
+            "saved_to": str(filepath) if filepath else "PostgreSQL",
+            "message": "Sessão finalizada e salva (predição não disponível)"
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        print(f"[ERRO] Falha ao completar sessão: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
