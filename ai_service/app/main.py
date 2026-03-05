@@ -301,6 +301,13 @@ async def get_user_sessions(user_id: str):
         try:
             session_data = session.get("session_data", {})
             
+            # DEBUG: Ver o que está vindo do PostgreSQL
+            session_id = session.get("session_id")
+            print(f"\n[DEBUG] Processando sessão: {session_id}")
+            print(f"[DEBUG] Keys em session_data: {list(session_data.keys())}")
+            print(f"[DEBUG] duration: {session_data.get('duration')}")
+            print(f"[DEBUG] ai_prediction: {session_data.get('ai_prediction')}")
+            
             # Extrai métricas básicas do session_data
             economy = session_data.get("economy_of_motion") or 0
             smoothness = session_data.get("smoothness_score") or 0
