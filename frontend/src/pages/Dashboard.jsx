@@ -163,6 +163,22 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* ADMIN DASHOBOARD  */}
+              <div onClick={() => navigate("/adminDashboard")} 
+                className="group relative bg-slate-900/20 border border-white/5 p-8 rounded-[2.5rem] cursor-pointer hover:bg-slate-800/40 hover:border-slate-500/30 transition-all duration-500 overflow-hidden shadow-lg opacity-80 hover:opacity-100">
+                <div className="relative z-10">
+                  <div className="h-14 w-14 bg-slate-700/20 rounded-2xl flex items-center justify-center mb-6 border border-white/10 text-slate-500 group-hover:text-slate-300">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-400 uppercase italic tracking-tighter mb-2 group-hover:text-slate-200">ADMIN DASHBOARD </h3>
+                  <p className="text-slate-500 text-[10px] font-medium leading-relaxed mb-8 opacity-60 group-hover:opacity-80">Acesso rápido ao painel de administração.</p>
+                  <div className="text-slate-600 group-hover:text-slate-400 text-[8px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                    ADMIN DASHBOARD <span className="group-hover:translate-x-3 transition-transform duration-500">{">>>"}</span>
+                  </div>
+                </div>
+
+              </div>
             </div>
 
             {/* SEÇÃO DINÂMICA: GESTÃO (ADMIN) OU OBJETIVOS (USER) */}

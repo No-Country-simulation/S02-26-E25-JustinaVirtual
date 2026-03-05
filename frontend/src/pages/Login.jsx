@@ -37,7 +37,7 @@ export default function Login() {
     };
 
     login(medicoFake);
-    navigate("/dashboard2");
+    navigate("/dashboard");
   }
 
   return (
