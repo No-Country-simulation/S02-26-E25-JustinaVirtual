@@ -29,6 +29,15 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+    // 🔐 Simulação de login
+    const medicoFake = {
+      name: "Dr. Ayran Vieira",
+      crm: "CRM 123456",
+      specialty: "Cirurgia Geral",
+    };
+
+    login(medicoFake);
+    navigate("/dashboard");
   }
 
   return (

@@ -80,7 +80,7 @@ export default function Navbar() {
           <Link to="/login" className="relative group">
             <div className="absolute -inset-0.5 bg-blue-600 opacity-20 group-hover:opacity-50 blur-sm transition"></div>
             <button className="relative px-6 py-2 bg-slate-900 border border-blue-500 text-blue-400 text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-600 hover:text-white transition-all">
-              Initialize_Auth
+              Login
             </button>
           </Link>
         )}
