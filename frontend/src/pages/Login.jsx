@@ -29,7 +29,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-
     // 🔐 Simulação de login
     const medicoFake = {
       name: "Dr. Ayran Vieira",
@@ -38,8 +37,7 @@ export default function Login() {
     };
 
     login(medicoFake);
-    navigate("/dashboard2");
-
+    navigate("/dashboard");
   }
 
   return (

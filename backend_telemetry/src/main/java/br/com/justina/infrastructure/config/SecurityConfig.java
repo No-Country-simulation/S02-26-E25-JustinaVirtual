@@ -57,6 +57,7 @@ public class SecurityConfig {
                         // 5. Rotas exclusivas de ADMIN
                         .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
                         .requestMatchers("/diretoria/**").hasRole("ADMIN")
+                        .requestMatchers("/questions/**").hasAnyRole("ADMIN", "USER")
 
                         .anyRequest().authenticated()
                 )
