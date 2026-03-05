@@ -305,25 +305,35 @@ async def get_user_sessions(user_id: str):
             economy = session_data.get("economy_of_motion") or 0
             smoothness = session_data.get("smoothness_score") or 0
             avg_velocity = session_data.get("avg_velocity") or 0
+            duration = session_data.get("duration")
             
-            # Predição com LSTM (se houver dados suficientes)
+            # Usa predição já salva (se existir) ao invés de recalcular
             predicted_skill = None
             ai_confidence = None
-            telemetry = session_data.get("telemetry_data", [])
+            ai_prediction = session_data.get("ai_prediction")
             
-            if len(telemetry) >= 10:
-                try:
-                    prediction_service = get_prediction_service()
-                    if prediction_service.model is not None:
-                        prediction = prediction_service.predict(telemetry)
-                        if "quality_level" in prediction:
-                            predicted_skill = prediction["quality_level"]
-                            ai_confidence = prediction.get("model_confidence")
-                            # Usa smoothness da IA se disponível
-                            if prediction.get("smoothness_score") is not None:
-                                smoothness = prediction["smoothness_score"]
-                except Exception as e:
-                    print(f"Erro na predição LSTM: {e}")
+            if ai_prediction:
+                # Predição já existe (foi calculada no complete)
+                predicted_skill = ai_prediction.get("quality_level")
+                ai_confidence = ai_prediction.get("model_confidence")
+                # Usa smoothness da IA
+                if ai_prediction.get("smoothness_score") is not None:
+                    smoothness = ai_prediction["smoothness_score"]
+            else:
+                # Fallback: calcula agora se não tiver predição salva
+                telemetry = session_data.get("telemetry_data", [])
+                if len(telemetry) >= 10:
+                    try:
+                        prediction_service = get_prediction_service()
+                        if prediction_service.model is not None:
+                            prediction = prediction_service.predict(telemetry)
+                            if "quality_level" in prediction:
+                                predicted_skill = prediction["quality_level"]
+                                ai_confidence = prediction.get("model_confidence")
+                                if prediction.get("smoothness_score") is not None:
+                                    smoothness = prediction["smoothness_score"]
+                    except Exception as e:
+                        print(f"Erro na predição LSTM: {e}")
             
             # Determina status baseado nas métricas
             status = "Good Performance"
@@ -342,10 +352,12 @@ async def get_user_sessions(user_id: str):
                 "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
                 "score": f"{int(score_value)}%",
                 "status": status,
+                "duration": round(duration, 1) if duration else None,
                 "metrics": {
                     "economy_of_motion": round(economy, 2),
                     "smoothness_score": round(smoothness, 4),
-                    "avg_velocity": round(avg_velocity, 2)
+                    "avg_velocity": round(avg_velocity, 2),
+                    "duration": round(duration, 1) if duration else None
                 },
                 "ai_prediction": {
                     "skill_level": predicted_skill,
