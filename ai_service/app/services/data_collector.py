@@ -94,7 +94,7 @@ class DataCollector:
         if len(trajectory) > 10:
             velocity_changes = np.abs(np.diff(velocities))
             high_freq_changes = np.sum(velocity_changes > np.percentile(velocity_changes, 90))
-            session.tremor_detected = high_freq_changes > len(velocities) * 0.1
+            session.tremor_detected = bool(high_freq_changes > len(velocities) * 0.1)
         
         if len(timestamps) > 0:
             session.duration = float(timestamps[-1] - timestamps[0])
