@@ -106,7 +106,7 @@ class DataCollector:
         session_id: str,
         user_feedback: Optional[str] = None,
         difficulty_rating: Optional[int] = None
-    ) -> Path:
+    ) -> tuple[Optional[Path], Dict]:
         """
         Finaliza sessão, calcula métricas e salva
         
@@ -114,7 +114,9 @@ class DataCollector:
         - Render: Salva em PostgreSQL (permanente)
         
         Returns:
-            Path do arquivo salvo (ou None se só PostgreSQL)
+            Tuple (filepath, session_data)
+            filepath: Path do arquivo salvo (ou None se só PostgreSQL)
+            session_data: Dict com todos os dados da sessão
         """
         if session_id not in self.active_sessions:
             raise ValueError(f"Sessão {session_id} não encontrada")
@@ -144,10 +146,10 @@ class DataCollector:
                 filepath = self.data_dir / filename
                 with open(filepath, 'w', encoding='utf-8') as f:
                     json.dump(session_data, f, indent=2, default=str)
-                return filepath
+                return filepath, session_data
             
             # Retorna None pois não há arquivo local
-            return None
+            return None, session_data
         else:
             # Local: Salva em arquivo JSON (como sempre)
             filename = f"{session_id}.json"
@@ -157,7 +159,7 @@ class DataCollector:
                 json.dump(session_data, f, indent=2, default=str)
             
             print(f"✅ Sessão {session_id} salva em {filepath}")
-            return filepath
+            return filepath, session_data
     
     def get_dataset_stats(self) -> dict:
         """Estatísticas do dataset coletado"""
