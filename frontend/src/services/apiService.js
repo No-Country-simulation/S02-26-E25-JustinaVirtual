@@ -2,9 +2,12 @@ const envUrl = import.meta.env.VITE_API_URL;
 export const API_BASE_URL =
   envUrl && envUrl !== "" ? envUrl : "http://localhost:8080/api";
 
-export const AI_BASE_URL = "http://localhost:8000";
+const envAiUrl = import.meta.env.VITE_AI_URL;
+export const AI_BASE_URL =
+  envAiUrl && envAiUrl !== "" ? envAiUrl : "http://localhost:8000";
 
 console.log("Conectando em:", API_BASE_URL);
+console.log("IA Service em:", AI_BASE_URL);
 
 export const apiService = {
   // 1. Registro de Usuário
