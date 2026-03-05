@@ -51,7 +51,15 @@ if IS_PRODUCTION and DATABASE_URL:
         cursor = conn.cursor()
         
         user_id = session_data.get("user_id")
-        print(f"[SAVE DB] session_id={session_id}, user_id={user_id}")
+        procedure_type = session_data.get("procedure_type")
+        start_time = session_data.get("start_time")
+        
+        print(f"\n[SAVE DB] ========")
+        print(f"[SAVE DB] session_id: {session_id}")
+        print(f"[SAVE DB] user_id: '{user_id}' (tipo: {type(user_id)})")
+        print(f"[SAVE DB] procedure_type: {procedure_type}")
+        print(f"[SAVE DB] session_data keys: {list(session_data.keys())}")
+        print(f"[SAVE DB] ========\n")
         
         try:
             cursor.execute("""
@@ -68,8 +76,8 @@ if IS_PRODUCTION and DATABASE_URL:
             """, (
                 session_id,
                 user_id,
-                session_data.get("procedure_type"),
-                session_data.get("start_time"),
+                procedure_type,
+                start_time,
                 json.dumps(session_data)
             ))
             conn.commit()
