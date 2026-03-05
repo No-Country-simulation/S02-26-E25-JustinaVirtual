@@ -301,42 +301,40 @@ async def get_user_sessions(user_id: str):
         try:
             session_data = session.get("session_data", {})
             
-            # Calcula métricas básicas (com defaults seguros)
+            # Extrai métricas básicas do session_data
             economy = session_data.get("economy_of_motion") or 0
             smoothness = session_data.get("smoothness_score") or 0
             avg_velocity = session_data.get("avg_velocity") or 0
             duration = session_data.get("duration")
+            tremor_detected = session_data.get("tremor_detected", False)
+            num_points = session_data.get("num_points", 0)
             
-            # Usa predição já salva (se existir) ao invés de recalcular
-            predicted_skill = None
-            ai_confidence = None
+            # Pega a predição COMPLETA que foi salva pelo LSTM
             ai_prediction = session_data.get("ai_prediction")
             
-            if ai_prediction:
-                # Predição já existe (foi calculada no complete)
-                predicted_skill = ai_prediction.get("quality_level")
-                ai_confidence = ai_prediction.get("model_confidence")
-                # Usa smoothness da IA
-                if ai_prediction.get("smoothness_score") is not None:
-                    smoothness = ai_prediction["smoothness_score"]
-            else:
+            if not ai_prediction:
                 # Fallback: calcula agora se não tiver predição salva
                 telemetry = session_data.get("telemetry_data", [])
                 if len(telemetry) >= 10:
                     try:
                         prediction_service = get_prediction_service()
                         if prediction_service.model is not None:
-                            prediction = prediction_service.predict(telemetry)
-                            if "quality_level" in prediction:
-                                predicted_skill = prediction["quality_level"]
-                                ai_confidence = prediction.get("model_confidence")
-                                if prediction.get("smoothness_score") is not None:
-                                    smoothness = prediction["smoothness_score"]
+                            ai_prediction = prediction_service.predict(telemetry)
+                            # Atualiza smoothness se veio da predição
+                            if ai_prediction.get("smoothness_score") is not None:
+                                smoothness = ai_prediction["smoothness_score"]
                     except Exception as e:
                         print(f"Erro na predição LSTM: {e}")
+                        ai_prediction = None
+            else:
+                # Se tem predição salva, usa o smoothness dela
+                if ai_prediction.get("smoothness_score") is not None:
+                    smoothness = ai_prediction["smoothness_score"]
             
             # Determina status baseado nas métricas
             status = "Good Performance"
+            predicted_skill = ai_prediction.get("quality_level") if ai_prediction else None
+            
             if smoothness > 0.02:
                 status = "Needs Improvement"
             elif economy > 1000:
@@ -353,17 +351,17 @@ async def get_user_sessions(user_id: str):
                 "score": f"{int(score_value)}%",
                 "status": status,
                 "duration": round(duration, 1) if duration else None,
+                "num_points": num_points,
+                "tremor_detected": tremor_detected,
                 "metrics": {
                     "economy_of_motion": round(economy, 2),
                     "smoothness_score": round(smoothness, 4),
                     "avg_velocity": round(avg_velocity, 2),
-                    "duration": round(duration, 1) if duration else None
+                    "duration": round(duration, 1) if duration else None,
+                    "tremor_detected": tremor_detected,
+                    "num_points": num_points
                 },
-                "ai_prediction": {
-                    "skill_level": predicted_skill,
-                    "confidence": ai_confidence,
-                    "quality_level": predicted_skill
-                }
+                "ai_prediction": ai_prediction  # Retorna o objeto COMPLETO do LSTM
             })
         except Exception as e:
             print(f"Erro ao processar sessão: {e}")
