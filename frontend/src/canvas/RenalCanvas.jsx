@@ -1,17 +1,16 @@
 // src/canvas/RenalCanvas.jsx
 import { useEffect, useRef, useState } from "react";
 import { apiService } from "../services/apiService";
-import { useNavigate } from "react-router-dom";
 
-export default function RenalCanvas({ onPositionUpdate, onFinish }) {
+export default function RenalCanvas({ onPositionUpdate, onFinish, onRestart }) {
   const canvasRef = useRef(null);
   const [path, setPath] = useState([]);
   const [startTime, setStartTime] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
   const [isSending, setIsSending] = useState(false);
    const [isDrawing, setIsDrawing] = useState(false); // Novo estado para controle de desenho
-const navigate = useNavigate();
-  // --- LÓGICA DE PERSISTÊNCIA ---
+
+// --- LÓGICA DE PERSISTÊNCIA ---
   useEffect(() => {
     const saved = localStorage.getItem("justina_draft_session");
     if (saved) {
@@ -255,9 +254,7 @@ const handleMouseLeave = () => {
               </button>
               {isFinished && (
                  <button
-                  //   onClick={() => window.location.reload()}
-                  // onClick={() => window.location.href = '/simulador-2d'}
-                  onClick={() => navigate("/simulador-2d")} 
+onClick={onRestart}
                     className="px-6 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg">
                     Nova Simulação
                  </button>

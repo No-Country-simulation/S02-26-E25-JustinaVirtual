@@ -7,11 +7,24 @@ export default function Simulator() {
   const [medico, setMedico] = useState("CIRURGIÃO");
   const [segundos, setSegundos] = useState(0);
   const [sessionId, setSessionId] = useState(null);
+  const [simulationKey, setSimulationKey] = useState(0);
   const navigate = useNavigate();
   
   const telemetryBuffer = useRef([]);
   const isFinalized = useRef(false);
   const sessionStartTime = useRef(null);
+
+// reset entire simulation
+  const startNewSimulation = () => {
+
+    telemetryBuffer.current = [];
+    isFinalized.current = false;
+    sessionStartTime.current = Date.now();
+
+    setSegundos(0);
+
+    setSimulationKey(prev => prev + 1);
+  };
 
   useEffect(() => {
     const dadosSalvos = localStorage.getItem("justina_user");
@@ -26,7 +39,7 @@ export default function Simulator() {
       setSegundos((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [simulationKey]);
 
   useEffect(() => {
     const iniciarColeta = async () => {
@@ -43,7 +56,7 @@ export default function Simulator() {
       }
     };
     iniciarColeta();
-  }, []);
+  }, [simulationKey]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -133,8 +146,10 @@ export default function Simulator() {
       
       <div className="bg-black rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden relative group">
         <RenalCanvas 
+          key={simulationKey}
           onPositionUpdate={handlePositionUpdate}
           onFinish={handleFinishSession}
+          onRestart={startNewSimulation}
         />
         
         <div className="absolute top-6 right-6 bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-right shadow-2xl">
