@@ -50,6 +50,9 @@ if IS_PRODUCTION and DATABASE_URL:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        user_id = session_data.get("user_id")
+        print(f"[SAVE DB] session_id={session_id}, user_id={user_id}")
+        
         try:
             cursor.execute("""
                 INSERT INTO sessions (session_id, user_id, procedure_type, start_time, session_data)
@@ -64,7 +67,7 @@ if IS_PRODUCTION and DATABASE_URL:
                     END
             """, (
                 session_id,
-                session_data.get("user_id"),
+                user_id,
                 session_data.get("procedure_type"),
                 session_data.get("start_time"),
                 json.dumps(session_data)
@@ -99,6 +102,8 @@ if IS_PRODUCTION and DATABASE_URL:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        print(f"[GET DB] Buscando sessões para user_id={user_id}")
+        
         cursor.execute("""
             SELECT session_id, user_id, procedure_type, session_data, created_at
             FROM sessions
@@ -107,6 +112,11 @@ if IS_PRODUCTION and DATABASE_URL:
         """, (user_id,))
         
         sessions = cursor.fetchall()
+        
+        print(f"[GET DB] Query retornou {len(sessions)} sessões")
+        if len(sessions) > 0:
+            print(f"[GET DB] Primeira sessão: session_id={sessions[0].get('session_id')}, user_id={sessions[0].get('user_id')}")
+        
         cursor.close()
         conn.close()
         
