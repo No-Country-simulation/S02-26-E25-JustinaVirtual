@@ -267,9 +267,12 @@ async def get_user_sessions(user_id: str):
     
     Retorna análise completa incluindo predição da IA quando disponível
     """
+    print(f"\n[ENDPOINT] GET /sessions/user/{user_id}")
+    
     if IS_PRODUCTION:
         # Busca do PostgreSQL
         sessions = get_sessions_by_user(user_id)
+        print(f"[POSTGRES] Encontradas {len(sessions)} sessões para {user_id}")
     else:
         # Busca dos arquivos JSON locais
         import glob
@@ -294,6 +297,8 @@ async def get_user_sessions(user_id: str):
         
         # Ordena por data (mais recente primeiro)
         sessions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    print(f"[PROCESSAMENTO] Iniciando processamento de {len(sessions)} sessões")
     
     # Processa cada sessão e adiciona análise da IA
     results = []
