@@ -56,7 +56,7 @@ Este repositório contém a arquitetura completa do sistema:
 ---
 ## Arquitetura do Sistema
 
-![Arquitetura do Sistema](docs/architecture.png)
+![Arquitetura do Sistema](assets/architecture.png)
 
 ---
 ## Stack Tecnológica
