@@ -67,6 +67,9 @@ if IS_PRODUCTION and DATABASE_URL:
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (session_id) 
                 DO UPDATE SET 
+                    user_id = EXCLUDED.user_id,
+                    procedure_type = EXCLUDED.procedure_type,
+                    start_time = EXCLUDED.start_time,
                     session_data = EXCLUDED.session_data,
                     end_time = CASE 
                         WHEN EXCLUDED.session_data->>'status' = 'completed' 
