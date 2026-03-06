@@ -113,7 +113,15 @@ if IS_PRODUCTION and DATABASE_URL:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        print(f"[GET DB] Buscando sessões para user_id={user_id}")
+        print(f"\n[GET DB] ======== QUERY ========")
+        print(f"[GET DB] Buscando WHERE user_id = '{user_id}'")
+        
+        # Debug: Lista TODAS as sessões para ver o que tem
+        cursor.execute("SELECT session_id, user_id FROM sessions ORDER BY created_at DESC LIMIT 5")
+        all_sessions = cursor.fetchall()
+        print(f"[GET DB] Últimas 5 sessões no banco:")
+        for s in all_sessions:
+            print(f"[GET DB]   - session_id={s['session_id']}, user_id={s['user_id']}")
         
         cursor.execute("""
             SELECT session_id, user_id, procedure_type, session_data, created_at
@@ -127,6 +135,7 @@ if IS_PRODUCTION and DATABASE_URL:
         print(f"[GET DB] Query retornou {len(sessions)} sessões")
         if len(sessions) > 0:
             print(f"[GET DB] Primeira sessão: session_id={sessions[0].get('session_id')}, user_id={sessions[0].get('user_id')}")
+        print(f"[GET DB] ======== FIM ========\n")
         
         cursor.close()
         conn.close()
