@@ -255,7 +255,9 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                     finally:
                         cursor.close()
                         conn.close()
-                    elif filepath:
+                
+                elif filepath:
+                    # Modo local: salva com predição em arquivo
                     with open(filepath, 'w', encoding='utf-8') as f:
                         json.dump(session_data, f, indent=2, default=str)
                     print(f"✅ Predição salva em {filepath}")
