@@ -200,6 +200,11 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                 
                 # Atualiza no banco/arquivo com a predição
                 if IS_PRODUCTION:
+                    print(f"\n[MAIN.PY] Antes de salvar predição:")
+                    print(f"[MAIN.PY] session_id: {session_id}")
+                    print(f"[MAIN.PY] user_id em session_data: {session_data.get('user_id')}")
+                    print(f"[MAIN.PY] Keys: {list(session_data.keys())[:10]}\n")
+                    
                     from app.database import save_session_to_db
                     save_session_to_db(session_id, session_data)
                     print(f"✅ Predição salva no PostgreSQL")
