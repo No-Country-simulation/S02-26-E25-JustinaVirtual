@@ -1,7 +1,9 @@
 package br.com.justina.domain.model.training;
 
+import br.com.justina.domain.model.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
@@ -10,7 +12,8 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "training_programs")
-public class TrainingProgram {
+@EqualsAndHashCode(callSuper = false)
+public class TrainingProgram extends BaseEntity { // Herança OK
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -37,10 +40,5 @@ public class TrainingProgram {
     @UpdateTimestamp
     private LocalDateTime modifiedAt;
 
-    private Boolean active = true;
-    private String status = "enabled";
     private Integer version = 1;
-    
-    // Vínculo com autor pode ser adicionado depois se Usuario existir
-    // private UUID authorId;
 }

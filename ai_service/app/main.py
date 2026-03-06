@@ -175,25 +175,67 @@ async def add_telemetry(session_id: str, points: List[TelemetryPoint]):
 @app.post("/sessions/{session_id}/complete")
 async def complete_session(session_id: str, request: SessionCompleteRequest):
     """
-    Finaliza sessão e salva dataset
-    
-    Calcula métricas automaticamente e salva arquivo JSON
+    Finaliza sessão, calcula métricas, faz predição LSTM e salva
     """
     try:
-        filepath = data_collector.complete_session(
+        # Primeiro: completa a sessão (calcula métricas básicas e retorna dados)
+        filepath, session_data = data_collector.complete_session(
             session_id=session_id,
             user_feedback=request.user_feedback,
             difficulty_rating=request.difficulty_rating
         )
+        
+        # Segundo: Faz predição LSTM com os dados de telemetria
+        try:
+            telemetry = session_data.get('telemetry_data', [])
+            
+            if len(telemetry) >= 2:
+                prediction_service = get_prediction_service()
+                prediction = prediction_service.predict(telemetry)
+                
+                print(f"[PREDIÇÃO] {session_id}: {prediction}")
+                
+                # Adiciona predição aos dados da sessão
+                session_data['ai_prediction'] = prediction
+                
+                # Atualiza no banco/arquivo com a predição
+                if IS_PRODUCTION:
+                    from app.database import save_session_to_db
+                    save_session_to_db(session_id, session_data)
+                    print(f"✅ Predição salva no PostgreSQL")
+                elif filepath:
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        json.dump(session_data, f, indent=2, default=str)
+                    print(f"✅ Predição salva em {filepath}")
+                
+                return {
+                    "status": "success",
+                    "session_id": session_id,
+                    "saved_to": str(filepath) if filepath else "PostgreSQL",
+                    "prediction": prediction,
+                    "message": "Sessão finalizada, predição calculada e salva"
+                }
+            else:
+                print(f"[AVISO] {session_id}: Dados insuficientes para predição ({len(telemetry)} pontos)")
+        
+        except Exception as pred_error:
+            print(f"[ERRO] Falha ao calcular predição para {session_id}: {pred_error}")
+            import traceback
+            traceback.print_exc()
+        
+        # Retorna sucesso mesmo sem predição
         return {
             "status": "success",
             "session_id": session_id,
-            "saved_to": str(filepath),
-            "message": "Sessão finalizada e salva com sucesso"
+            "saved_to": str(filepath) if filepath else "PostgreSQL",
+            "message": "Sessão finalizada e salva (predição não disponível)"
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        print(f"[ERRO] Falha ao completar sessão: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -259,32 +301,40 @@ async def get_user_sessions(user_id: str):
         try:
             session_data = session.get("session_data", {})
             
-            # Calcula métricas básicas (com defaults seguros)
+            # Extrai métricas básicas do session_data
             economy = session_data.get("economy_of_motion") or 0
             smoothness = session_data.get("smoothness_score") or 0
             avg_velocity = session_data.get("avg_velocity") or 0
+            duration = session_data.get("duration")
+            tremor_detected = session_data.get("tremor_detected", False)
+            num_points = session_data.get("num_points", 0)
             
-            # Predição com LSTM (se houver dados suficientes)
-            predicted_skill = None
-            ai_confidence = None
-            telemetry = session_data.get("telemetry_data", [])
+            # Pega a predição COMPLETA que foi salva pelo LSTM
+            ai_prediction = session_data.get("ai_prediction")
             
-            if len(telemetry) >= 10:
-                try:
-                    prediction_service = get_prediction_service()
-                    if prediction_service.model is not None:
-                        prediction = prediction_service.predict(telemetry)
-                        if "quality_level" in prediction:
-                            predicted_skill = prediction["quality_level"]
-                            ai_confidence = prediction.get("model_confidence")
-                            # Usa smoothness da IA se disponível
-                            if prediction.get("smoothness_score") is not None:
-                                smoothness = prediction["smoothness_score"]
-                except Exception as e:
-                    print(f"Erro na predição LSTM: {e}")
+            if not ai_prediction:
+                # Fallback: calcula agora se não tiver predição salva
+                telemetry = session_data.get("telemetry_data", [])
+                if len(telemetry) >= 10:
+                    try:
+                        prediction_service = get_prediction_service()
+                        if prediction_service.model is not None:
+                            ai_prediction = prediction_service.predict(telemetry)
+                            # Atualiza smoothness se veio da predição
+                            if ai_prediction.get("smoothness_score") is not None:
+                                smoothness = ai_prediction["smoothness_score"]
+                    except Exception as e:
+                        print(f"Erro na predição LSTM: {e}")
+                        ai_prediction = None
+            else:
+                # Se tem predição salva, usa o smoothness dela
+                if ai_prediction.get("smoothness_score") is not None:
+                    smoothness = ai_prediction["smoothness_score"]
             
             # Determina status baseado nas métricas
             status = "Good Performance"
+            predicted_skill = ai_prediction.get("quality_level") if ai_prediction else None
+            
             if smoothness > 0.02:
                 status = "Needs Improvement"
             elif economy > 1000:
@@ -300,16 +350,18 @@ async def get_user_sessions(user_id: str):
                 "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
                 "score": f"{int(score_value)}%",
                 "status": status,
+                "duration": round(duration, 1) if duration else None,
+                "num_points": num_points,
+                "tremor_detected": tremor_detected,
                 "metrics": {
                     "economy_of_motion": round(economy, 2),
                     "smoothness_score": round(smoothness, 4),
-                    "avg_velocity": round(avg_velocity, 2)
+                    "avg_velocity": round(avg_velocity, 2),
+                    "duration": round(duration, 1) if duration else None,
+                    "tremor_detected": tremor_detected,
+                    "num_points": num_points
                 },
-                "ai_prediction": {
-                    "skill_level": predicted_skill,
-                    "confidence": ai_confidence,
-                    "quality_level": predicted_skill
-                }
+                "ai_prediction": ai_prediction  # Retorna o objeto COMPLETO do LSTM
             })
         except Exception as e:
             print(f"Erro ao processar sessão: {e}")

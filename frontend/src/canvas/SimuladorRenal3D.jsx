@@ -73,6 +73,9 @@ export default function SimuladorRenal3D() {
     if (!sessionId || isFinalized.current) return;
 
     const interval = setInterval(async () => {
+      // Verifica novamente se foi finalizado antes de enviar
+      if (isFinalized.current) return;
+      
       if (telemetryBuffer.current.length > 0) {
         try {
           await apiService.sendTelemetryBatch(sessionId, telemetryBuffer.current);

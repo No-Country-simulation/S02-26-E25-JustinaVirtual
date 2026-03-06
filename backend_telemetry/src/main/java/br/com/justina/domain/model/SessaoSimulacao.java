@@ -24,10 +24,11 @@ public class SessaoSimulacao {
     @NotNull(message = "Toda sessão deve pertencer a um usuário.")
     private Usuario usuario;
 
+    
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cirurgia_id", nullable = false)
     @NotNull(message = "Toda sessão deve estar vinculada a um procedimento cirúrgico.")
-    private Cirurgia cirurgia; // MANTIDO!
+    private Cirurgia cirurgia;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataInicio;
@@ -38,34 +39,27 @@ public class SessaoSimulacao {
     @Column(nullable = false)
     private StatusSessao status;
 
-    // --- (Métricas Gerais) ---
+    // Métricas Gerais
     private Double pontuacaoGeral;
     private Integer totalErros;
     private Long tempoTotalSegundos;
 
-    // --- (Resultados da IA) ---
+    // Resultados da IA
     private String statusIa;
     private Double precisaoIa;
-    
-    // --- NOVO CAMPO (Adicionado agora) ---
     private String relatorioUrl;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    // --- LÓGICA AUTOMÁTICA (Ciclo de Vida) ---
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.dataInicio == null) {
-            this.dataInicio = LocalDateTime.now();
-        }
-
-        if (this.status == null) {
-            this.status = StatusSessao.EM_ANDAMENTO;
-        }
+        if (this.dataInicio == null) dataInicio = LocalDateTime.now();
+        if (this.status == null) status = StatusSessao.EM_ANDAMENTO;
     }
 
+    
     public boolean isFinalizada() {
         return StatusSessao.FINALIZADA.equals(this.status);
     }
@@ -74,6 +68,7 @@ public class SessaoSimulacao {
         return StatusSessao.EM_ANDAMENTO.equals(this.status);
     }
 
+    
     public double getPercentualAcertos() {
         if (totalErros == null || totalErros == 0)
             return 100.0;
