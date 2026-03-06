@@ -1,0 +1,55 @@
+package br.com.justina.domain.model.training;
+
+import br.com.justina.domain.model.common.BaseEntity;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode; 
+import org.hibernate.type.SqlTypes;           
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@Entity
+@Table(name = "questions", indexes = {
+    @Index(name = "idx_questions_type", columnList = "type"),
+    @Index(name = "idx_questions_media", columnList = "mediaUrl")
+})
+@EqualsAndHashCode(callSuper = false)
+public class Question extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private QuestionType type;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String text;
+
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private List<String> options; 
+
+    @Column(name = "correct_index", nullable = false)
+    private Integer correctIndex;
+
+    private String hint;
+    private String topic;
+    private String mediaUrl;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    private LocalDateTime modifiedAt;
+
+    private Integer version = 1;
+}
