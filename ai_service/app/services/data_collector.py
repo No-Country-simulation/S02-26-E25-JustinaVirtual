@@ -147,13 +147,16 @@ class DataCollector:
         if IS_PRODUCTION:
             # Produção: Salva no PostgreSQL (permanente)
             try:
-                # CRITICAL: Importa o módulo e recarrega para pegar versão mais recente
-                database_module = importlib.reload(database_module)
-                save_func = database_module.save_session_to_db
+                # CRITICAL: Importa o módulo localmente e recarrega para pegar versão mais recente
+                import app.database as db_mod
+                db_mod = importlib.reload(db_mod)
+                save_func = db_mod.save_session_to_db
                 save_func(session_id, session_data)
                 print(f"✅ Sessão {session_id} salva no PostgreSQL (v2.1)")
             except Exception as e:
                 print(f"❌ Erro ao salvar no PostgreSQL: {e}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: salva em JSON mesmo em produção
                 filename = f"{session_id}.json"
                 filepath = self.data_dir / filename
