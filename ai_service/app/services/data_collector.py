@@ -145,26 +145,9 @@ class DataCollector:
         
         # MODO HÍBRIDO: Local = JSON, Render = PostgreSQL
         if IS_PRODUCTION:
-            # Produção: Salva no PostgreSQL (permanente)
-            try:
-                # CRITICAL: Importa o módulo localmente e recarrega para pegar versão mais recente
-                import app.database as db_mod
-                db_mod = importlib.reload(db_mod)
-                save_func = db_mod.save_session_to_db
-                save_func(session_id, session_data)
-                print(f"✅ Sessão {session_id} salva no PostgreSQL (v2.1)")
-            except Exception as e:
-                print(f"❌ Erro ao salvar no PostgreSQL: {e}")
-                import traceback
-                traceback.print_exc()
-                # Fallback: salva em JSON mesmo em produção
-                filename = f"{session_id}.json"
-                filepath = self.data_dir / filename
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(session_data, f, indent=2, default=str)
-                return filepath, session_data
-            
-            # Retorna None pois não há arquivo local
+            # Produção: NÃO salva ainda - main.py vai salvar depois com predição
+            # Isso evita problema de ON CONFLICT e cache
+            print(f"[DATA COLLECTOR] Sessão {session_id} preparada (aguardando predição para salvar)")
             return None, session_data
         else:
             # Local: Salva em arquivo JSON (como sempre)

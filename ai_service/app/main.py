@@ -211,21 +211,51 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                 # Adiciona predição aos dados da sessão
                 session_data['ai_prediction'] = prediction
                 
-                # Atualiza no banco/arquivo com a predição
+                # Salva TUDO de uma vez no banco (agora com predição incluída)
                 if IS_PRODUCTION:
-                    print(f"\n[MAIN.PY] Antes de salvar predição:")
+                    print(f"\n[MAIN.PY] Salvando sessão completa com predição:")
                     print(f"[MAIN.PY] session_id: {session_id}")
-                    print(f"[MAIN.PY] user_id em session_data: {session_data.get('user_id')}")
-                    print(f"[MAIN.PY] Keys: {list(session_data.keys())[:10]}\n")
+                    print(f"[MAIN.PY] user_id: {session_data.get('user_id')}")
+                    print(f"[MAIN.PY] procedure_type: {session_data.get('procedure_type')}")
+                    print(f"[MAIN.PY] duration: {session_data.get('duration')}")
+                    print(f"[MAIN.PY] quality: {prediction.get('quality_level')}")
                     
-                    # Force reload to get latest version
-                    import app.database as db_module
-                    db_module = importlib.reload(db_module)
-                    save_func = db_module.save_session_to_db
+                    # Import direto da função (sem cache)
+                    from app.database import get_db_connection
+                    import json as json_lib
                     
-                    save_func(session_id, session_data)
-                    print(f"✅ Predição salva no PostgreSQL")
-                elif filepath:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("""
+                            INSERT INTO sessions (session_id, user_id, procedure_type, start_time, session_data)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON CONFLICT (session_id) 
+                            DO UPDATE SET 
+                                user_id = EXCLUDED.user_id,
+                                procedure_type = EXCLUDED.procedure_type,
+                                start_time = EXCLUDED.start_time,
+                                session_data = EXCLUDED.session_data,
+                                end_time = CURRENT_TIMESTAMP
+                        """, (
+                            session_id,
+                            session_data.get('user_id'),
+                            session_data.get('procedure_type'),
+                            session_data.get('start_time'),
+                            json_lib.dumps(session_data, default=str)
+                        ))
+                        conn.commit()
+                        print(f"✅ Sessão {session_id} salva no PostgreSQL (inline SQL)")
+                    except Exception as db_error:
+                        conn.rollback()
+                        print(f"❌ Erro SQL: {db_error}")
+                        import traceback
+                        traceback.print_exc()
+                    finally:
+                        cursor.close()
+                        conn.close()
+                    elif filepath:
                     with open(filepath, 'w', encoding='utf-8') as f:
                         json.dump(session_data, f, indent=2, default=str)
                     print(f"✅ Predição salva em {filepath}")
