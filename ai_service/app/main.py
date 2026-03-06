@@ -9,6 +9,8 @@ import torch
 import json
 import zipfile
 from io import BytesIO
+import importlib
+import sys
 
 from app.schemas.telemetry import (
     TelemetryPoint, 
@@ -21,11 +23,22 @@ from app.services.prediction_service import get_prediction_service
 
 # Database (PostgreSQL no Render)
 try:
-    from app.database import IS_PRODUCTION, init_database, get_all_sessions, get_sessions_by_user
-except ImportError:
+    from app import database
+    # FORCE RELOAD: Invalida cache de bytecode
+    if 'app.database' in sys.modules:
+        print("[MAIN INIT] Forçando reload do módulo database para invalidar cache...")
+        database = importlib.reload(database)
+    
+    IS_PRODUCTION = database.IS_PRODUCTION
+    init_database = database.init_database
+    get_all_sessions = database.get_all_sessions
+    get_sessions_by_user = database.get_sessions_by_user
+except ImportError as e:
+    print(f"[MAIN INIT] Erro ao importar database: {e}")
     IS_PRODUCTION = False
     init_database = lambda: None
     get_all_sessions = lambda: []
+    get_sessions_by_user = lambda user_id: []
 
 app = FastAPI(
     title="Justina AI Service",
@@ -205,8 +218,12 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                     print(f"[MAIN.PY] user_id em session_data: {session_data.get('user_id')}")
                     print(f"[MAIN.PY] Keys: {list(session_data.keys())[:10]}\n")
                     
-                    from app.database import save_session_to_db
-                    save_session_to_db(session_id, session_data)
+                    # Force reload to get latest version
+                    import app.database as db_module
+                    db_module = importlib.reload(db_module)
+                    save_func = db_module.save_session_to_db
+                    
+                    save_func(session_id, session_data)
                     print(f"✅ Predição salva no PostgreSQL")
                 elif filepath:
                     with open(filepath, 'w', encoding='utf-8') as f:

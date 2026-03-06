@@ -9,13 +9,23 @@ import os
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
+import importlib
+import sys
+
 from app.schemas.telemetry import TrainingSession, TelemetryPoint
 import numpy as np
 
 # Importa database apenas se necessário
 try:
-    from app.database import IS_PRODUCTION, save_session_to_db
-except ImportError:
+    import app.database as database_module
+    # FORCE RELOAD: Invalida cache
+    if 'app.database' in sys.modules:
+        database_module = importlib.reload(database_module)
+    
+    IS_PRODUCTION = database_module.IS_PRODUCTION
+    save_session_to_db = database_module.save_session_to_db
+except ImportError as e:
+    print(f"[DATA COLLECTOR] Erro ao importar database: {e}")
     IS_PRODUCTION = False
     save_session_to_db = None
 
