@@ -409,9 +409,18 @@ async def get_user_sessions(user_id: str):
             # Calcula score seguro
             score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
             
+            # Converte datetime para string
+            created_at = session.get("created_at")
+            date_str = "N/A"
+            if created_at:
+                if isinstance(created_at, str):
+                    date_str = created_at[:10]
+                else:  # datetime object
+                    date_str = created_at.strftime("%Y-%m-%d")
+            
             results.append({
                 "session_id": session.get("session_id"),
-                "date": (session.get("created_at", "")[:10] if session.get("created_at") else "N/A"),
+                "date": date_str,
                 "procedure_type": session.get("procedure_type", "unknown"),
                 "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
                 "score": f"{int(score_value)}%",
