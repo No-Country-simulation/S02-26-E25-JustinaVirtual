@@ -17,14 +17,19 @@ print(f"[DATABASE MODULE] Loading version {_CACHE_VERSION}")
 IS_PRODUCTION = os.getenv("RENDER") is not None
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Função de conexão - disponível globalmente
+def get_db_connection():
+    """Cria conexão com PostgreSQL do Render"""
+    if not IS_PRODUCTION or not DATABASE_URL:
+        raise RuntimeError("PostgreSQL não configurado (não está em produção)")
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+
 # PostgreSQL só é usado em produção
 if IS_PRODUCTION and DATABASE_URL:
     import psycopg2
     from psycopg2.extras import RealDictCursor
-    
-    def get_db_connection():
-        """Cria conexão com PostgreSQL do Render"""
-        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     
     def init_database():
         """Inicializa tabelas no PostgreSQL"""
