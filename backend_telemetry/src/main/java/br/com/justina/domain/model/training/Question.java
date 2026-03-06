@@ -6,7 +6,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode; 
+import org.hibernate.type.SqlTypes;           
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -16,7 +20,7 @@ import java.util.UUID;
     @Index(name = "idx_questions_media", columnList = "mediaUrl")
 })
 @EqualsAndHashCode(callSuper = false)
-public class Question extends BaseEntity { // Herança OK
+public class Question extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,8 +33,10 @@ public class Question extends BaseEntity { // Herança OK
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
+    
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
-    private String options; 
+    private List<String> options; 
 
     @Column(name = "correct_index", nullable = false)
     private Integer correctIndex;
