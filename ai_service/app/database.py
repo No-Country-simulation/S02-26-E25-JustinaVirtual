@@ -17,11 +17,17 @@ print(f"[DATABASE MODULE] Loading version {_CACHE_VERSION}")
 IS_PRODUCTION = os.getenv("RENDER") is not None
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+print(f"[ENV CHECK] RENDER={os.getenv('RENDER')}")
+print(f"[ENV CHECK] IS_PRODUCTION={IS_PRODUCTION}")
+print(f"[ENV CHECK] DATABASE_URL={'SET' if DATABASE_URL else 'NOT SET'}")
+
 # Função de conexão - disponível globalmente
 def get_db_connection():
     """Cria conexão com PostgreSQL do Render"""
-    if not IS_PRODUCTION or not DATABASE_URL:
-        raise RuntimeError("PostgreSQL não configurado (não está em produção)")
+    if not IS_PRODUCTION:
+        raise RuntimeError(f"PostgreSQL não configurado: IS_PRODUCTION={IS_PRODUCTION}, RENDER env={os.getenv('RENDER')}")
+    if not DATABASE_URL:
+        raise RuntimeError("PostgreSQL não configurado: DATABASE_URL não está setada")
     import psycopg2
     from psycopg2.extras import RealDictCursor
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
