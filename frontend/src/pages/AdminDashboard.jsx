@@ -4,6 +4,8 @@ import { useState } from "react";
 import QuestionsTab from "../components/admin/QuestionsTab";
 import ProgramsTab from "../components/admin/ProgramsTab";
 import SessionsTab from "../components/admin/SessionsTab";
+import ThreeDSessionsTab from "../components/admin/3DsessionsTab";
+
 
 export default function AdminDashboard() {
 
@@ -12,7 +14,8 @@ export default function AdminDashboard() {
   const tabs = [
     { key: "questions", label: "Questions" },
     { key: "programs", label: "Training Programs" },
-    { key: "sessions", label: "Training Sessions" }
+    { key: "sessions", label: "Training Sessions" },
+    { key: "3Dsessions", label: "3D sessions"}
   ];
 
   return (
@@ -40,6 +43,7 @@ export default function AdminDashboard() {
       {activeTab === "questions" && <QuestionsTab />}
       {activeTab === "programs" && <ProgramsTab />}
       {activeTab === "sessions" && <SessionsTab />}
+      {activeTab === "3Dsessions" && <ThreeDSessionsTab />}
     </div>
   );
 }
