@@ -1,3 +1,8 @@
+"""
+Database module for PostgreSQL operations
+Version: 2.0 - Fixed ON CONFLICT and cache issues
+Last updated: 2026-03-05
+"""
 import os
 import json
 from typing import Optional, List, Dict
