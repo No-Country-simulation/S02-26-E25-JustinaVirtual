@@ -7,7 +7,6 @@ import br.com.justina.domain.model.Cirurgia;
 import br.com.justina.domain.model.FeedbackIA;
 import br.com.justina.domain.model.SessaoSimulacao;
 import br.com.justina.domain.model.Telemetria;
-import br.com.justina.infrastructure.exception.RegraCirurgiaException;
 import br.com.justina.domain.repository.CirurgiaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,13 +30,16 @@ public class RegistrarMovimentoUseCase {
     public FeedbackIA executar(UUID usuarioId, List<Telemetria> movimentos) {
         log.info("Persistindo {} movimentos para usuário {} e solicitando análise IA", movimentos.size(), usuarioId);
 
+        // Verifica se há movimentos e se a sessão está presente (mesmo que transiente)
         if (!movimentos.isEmpty() && movimentos.get(0).getSessao() != null) {
             SessaoSimulacao sessao = movimentos.get(0).getSessao();
 
             // 1. Vincula a cirurgia ANTES de tentar salvar no banco!
+            // (Isso corrige o erro de 'transient value' que poderia acontecer)
             if (sessao.getCirurgia() == null) {
+                // Pega a primeira cirurgia disponível no banco como padrão (ou lance erro)
                 Cirurgia cirurgiaBase = cirurgiaRepository.findAll().stream().findFirst()
-                        .orElseThrow(() -> new IllegalStateException("Nenhuma cirurgia cadastrada no sistema!"));
+                        .orElseThrow(() -> new IllegalStateException("Nenhuma cirurgia cadastrada no sistema! Cadastre uma cirurgia antes de simular."));
                 sessao.setCirurgia(cirurgiaBase);
             }
 
@@ -47,7 +49,7 @@ public class RegistrarMovimentoUseCase {
             }
         }
 
-        // 3. Pede feedback para a IA do Google Gemini
+        // 3. Pede feedback para a IA (Python)
         FeedbackIA feedback = aiClient.analisarMovimentos(movimentos);
 
         // 4. Se a IA detectou um erro crítico, penalizamos a sessão
@@ -58,14 +60,15 @@ public class RegistrarMovimentoUseCase {
             sessao.setTotalErros(erros + 1);
         }
 
-        // 5. Persiste tudo
+        // 5. Persiste tudo no banco
         repository.salvarTudo(usuarioId, movimentos);
 
+        // Loga o resultado
         if (!movimentos.isEmpty() && movimentos.get(0).getSessao() != null) {
             SessaoSimulacao sessao = movimentos.get(0).getSessao();
+            // Salva o estado atualizado da sessão (com erros computados)
             repository.salvarSessao(sessao);
-            log.info("Sessão {} salva com sucesso. Erros acumulados: {} | Pontuação: {}",
-                    sessao.getId(), sessao.getTotalErros(), sessao.getPontuacaoGeral());
+            log.info("Sessão {} processada. Erros acumulados: {}", sessao.getId(), sessao.getTotalErros());
         }
 
         return feedback;

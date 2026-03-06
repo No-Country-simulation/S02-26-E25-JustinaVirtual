@@ -1,7 +1,9 @@
 package br.com.justina.domain.model.training;
 
+import br.com.justina.domain.model.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
@@ -13,7 +15,9 @@ import java.util.UUID;
     @Index(name = "idx_questions_type", columnList = "type"),
     @Index(name = "idx_questions_media", columnList = "mediaUrl")
 })
-public class Question {
+@EqualsAndHashCode(callSuper = false)
+public class Question extends BaseEntity { // Herança OK
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -25,7 +29,6 @@ public class Question {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
-    // JSONB mapeado como String para flexibilidade
     @Column(columnDefinition = "jsonb", nullable = false)
     private String options; 
 
@@ -42,7 +45,5 @@ public class Question {
     @UpdateTimestamp
     private LocalDateTime modifiedAt;
 
-    private Boolean active = true;
-    private String status = "enabled";
     private Integer version = 1;
 }
