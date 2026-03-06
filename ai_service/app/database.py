@@ -165,6 +165,28 @@ if IS_PRODUCTION and DATABASE_URL:
         
         return [dict(row) for row in sessions]
     
+    def get_sessions_all() -> List[Dict]:
+        """Busca TODAS as sessões (todos os usuários)"""
+        print(f"[GET DB] Buscando TODAS as sessões")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT session_id, user_id, procedure_type, session_data, created_at
+            FROM sessions
+            ORDER BY created_at DESC
+        """)
+        
+        sessions = cursor.fetchall()
+        
+        print(f"[GET DB] Query retornou {len(sessions)} sessões no total")
+        
+        cursor.close()
+        conn.close()
+        
+        return [dict(row) for row in sessions]
+    
     def get_session_count() -> int:
         """Conta total de sessões no banco"""
         conn = get_db_connection()

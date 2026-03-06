@@ -449,6 +449,99 @@ async def get_user_sessions(user_id: str):
     }
 
 
+@app.get("/sessions/all")
+async def get_all_sessions():
+    """
+    Busca TODAS as sessões de TODOS os usuários
+    
+    Útil para:
+    - Dashboard administrativo
+    - Leaderboards globais
+    - Estatísticas gerais
+    - Listagem completa
+    """
+    print(f"[ENDPOINT] GET /sessions/all")
+    
+    # PostgreSQL em produção
+    if IS_PRODUCTION:
+        from app.database import get_sessions_all
+        sessions = get_sessions_all()
+    else:
+        # Local: retorna vazio (dados estão em arquivos JSON)
+        sessions = []
+    
+    print(f"[POSTGRES] Encontradas {len(sessions)} sessões no total")
+    print(f"[PROCESSAMENTO] Iniciando processamento de {len(sessions)} sessões")
+    
+    # Processa cada sessão (mesma lógica do endpoint por usuário)
+    results = []
+    for session in sessions:
+        try:
+            session_data = session.get("session_data", {})
+            
+            # Extrai métricas básicas
+            economy = session_data.get("economy_of_motion") or 0
+            smoothness = session_data.get("smoothness_score") or 0
+            avg_velocity = session_data.get("avg_velocity") or 0
+            duration = session_data.get("duration")
+            tremor_detected = session_data.get("tremor_detected", False)
+            num_points = session_data.get("num_points", 0)
+            
+            # Pega predição LSTM salva
+            ai_prediction = session_data.get("ai_prediction")
+            
+            if ai_prediction and ai_prediction.get("smoothness_score") is not None:
+                smoothness = ai_prediction["smoothness_score"]
+            
+            # Determina status
+            status = "Good Performance"
+            if smoothness > 0.02:
+                status = "Needs Improvement"
+            elif economy > 1000:
+                status = "Check Efficiency"
+            
+            score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
+            
+            # Converte datetime para string
+            created_at = session.get("created_at")
+            date_str = "N/A"
+            if created_at:
+                if isinstance(created_at, str):
+                    date_str = created_at[:10]
+                else:
+                    date_str = created_at.strftime("%Y-%m-%d")
+            
+            results.append({
+                "session_id": session.get("session_id"),
+                "user_id": session.get("user_id"),  # IMPORTANTE: inclui user_id
+                "date": date_str,
+                "procedure_type": session.get("procedure_type", "unknown"),
+                "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
+                "score": f"{int(score_value)}%",
+                "status": status,
+                "duration": round(duration, 1) if duration else None,
+                "num_points": num_points,
+                "tremor_detected": tremor_detected,
+                "metrics": {
+                    "economy_of_motion": round(economy, 2),
+                    "smoothness_score": round(smoothness, 4),
+                    "avg_velocity": round(avg_velocity, 2),
+                    "duration": round(duration, 1) if duration else None,
+                    "tremor_detected": tremor_detected,
+                    "num_points": num_points
+                },
+                "ai_prediction": ai_prediction
+            })
+        except Exception as e:
+            print(f"Erro ao processar sessão: {e}")
+            continue
+    
+    return {
+        "total_sessions": len(results),
+        "sessions": results
+    }
+
+
 # ===== AI PREDICTION ENDPOINTS =====
 
 class PredictionRequest(BaseModel):
