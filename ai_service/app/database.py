@@ -1,20 +1,36 @@
+"""
+Database module for PostgreSQL operations
+Version: 2.1 - FORCE CACHE INVALIDATION
+Build timestamp: 2026-03-06T01:47:00Z
+CRITICAL: This module MUST reload to fix ON CONFLICT clause
+"""
 import os
 import json
 from typing import Optional, List, Dict
 from datetime import datetime
 
+# Cache buster - Force module reload
+_CACHE_VERSION = "v2.1_20260306_014700"
+
 # Detecta se está rodando no Render
 IS_PRODUCTION = os.getenv("RENDER") is not None
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Função de conexão - disponível globalmente
+def get_db_connection():
+    """Cria conexão com PostgreSQL do Render"""
+    if not IS_PRODUCTION:
+        raise RuntimeError(f"PostgreSQL não configurado: IS_PRODUCTION={IS_PRODUCTION}, RENDER env={os.getenv('RENDER')}")
+    if not DATABASE_URL:
+        raise RuntimeError("PostgreSQL não configurado: DATABASE_URL não está setada")
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 # PostgreSQL só é usado em produção
 if IS_PRODUCTION and DATABASE_URL:
     import psycopg2
     from psycopg2.extras import RealDictCursor
-    
-    def get_db_connection():
-        """Cria conexão com PostgreSQL do Render"""
-        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     
     def init_database():
         """Inicializa tabelas no PostgreSQL"""
@@ -46,9 +62,21 @@ if IS_PRODUCTION and DATABASE_URL:
         conn.close()
     
     def save_session_to_db(session_id: str, session_data: Dict):
-        """Salva sessão no PostgreSQL"""
+        """Salva sessão no PostgreSQL - v2.1 com ON CONFLICT fix"""
+        print(f"\n[SAVE DB v2.1] ======== NOVA VERSÃO ========")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        user_id = session_data.get("user_id")
+        procedure_type = session_data.get("procedure_type")
+        start_time = session_data.get("start_time")
+        
+        print(f"[SAVE DB v2.1] session_id: {session_id}")
+        print(f"[SAVE DB v2.1] user_id: '{user_id}' (tipo: {type(user_id)})")
+        print(f"[SAVE DB v2.1] procedure_type: {procedure_type}")
+        print(f"[SAVE DB v2.1] session_data keys: {list(session_data.keys())}")
+        print(f"[SAVE DB v2.1] ========\n")
         
         try:
             cursor.execute("""
@@ -56,6 +84,9 @@ if IS_PRODUCTION and DATABASE_URL:
                 VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (session_id) 
                 DO UPDATE SET 
+                    user_id = EXCLUDED.user_id,
+                    procedure_type = EXCLUDED.procedure_type,
+                    start_time = EXCLUDED.start_time,
                     session_data = EXCLUDED.session_data,
                     end_time = CASE 
                         WHEN EXCLUDED.session_data->>'status' = 'completed' 
@@ -64,9 +95,9 @@ if IS_PRODUCTION and DATABASE_URL:
                     END
             """, (
                 session_id,
-                session_data.get("user_id"),
-                session_data.get("procedure_type"),
-                session_data.get("start_time"),
+                user_id,
+                procedure_type,
+                start_time,
                 json.dumps(session_data)
             ))
             conn.commit()
@@ -95,9 +126,20 @@ if IS_PRODUCTION and DATABASE_URL:
         return [dict(row) for row in sessions]
     
     def get_sessions_by_user(user_id: str) -> List[Dict]:
-        """Busca sessões de um usuário específico"""
+        """Busca sessões de um usuário específico - v2.1"""
+        print(f"\n[GET DB v2.1] ======== QUERY NOVA VERSÃO ========")
+        
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        print(f"[GET DB v2.1] Buscando WHERE user_id = '{user_id}'")
+        
+        # Debug: Lista TODAS as sessões para ver o que tem
+        cursor.execute("SELECT session_id, user_id FROM sessions ORDER BY created_at DESC LIMIT 5")
+        all_sessions = cursor.fetchall()
+        print(f"[GET DB v2.1] Últimas 5 sessões no banco:")
+        for s in all_sessions:
+            print(f"[GET DB v2.1]   - session_id={s['session_id']}, user_id={s['user_id']}")
         
         cursor.execute("""
             SELECT session_id, user_id, procedure_type, session_data, created_at
@@ -107,6 +149,30 @@ if IS_PRODUCTION and DATABASE_URL:
         """, (user_id,))
         
         sessions = cursor.fetchall()
+        
+        print(f"[GET DB v2.1] Query retornou {len(sessions)} sessões")
+        if len(sessions) > 0:
+            print(f"[GET DB v2.1] Primeira sessão: session_id={sessions[0].get('session_id')}, user_id={sessions[0].get('user_id')}")
+        print(f"[GET DB v2.1] ======== FIM ========\n")
+        
+        cursor.close()
+        conn.close()
+        
+        return [dict(row) for row in sessions]
+    
+    def get_sessions_all() -> List[Dict]:
+        """Busca TODAS as sessões (todos os usuários)"""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT session_id, user_id, procedure_type, session_data, created_at
+            FROM sessions
+            ORDER BY created_at DESC
+        """)
+        
+        sessions = cursor.fetchall()
+        
         cursor.close()
         conn.close()
         

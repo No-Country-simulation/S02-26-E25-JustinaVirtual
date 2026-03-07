@@ -9,12 +9,21 @@ import os
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
+import importlib
+import sys
+
 from app.schemas.telemetry import TrainingSession, TelemetryPoint
 import numpy as np
 
 # Importa database apenas se necessário
 try:
-    from app.database import IS_PRODUCTION, save_session_to_db
+    import app.database as database_module
+    # FORCE RELOAD: Invalida cache
+    if 'app.database' in sys.modules:
+        database_module = importlib.reload(database_module)
+    
+    IS_PRODUCTION = database_module.IS_PRODUCTION
+    save_session_to_db = database_module.save_session_to_db
 except ImportError:
     IS_PRODUCTION = False
     save_session_to_db = None
@@ -134,21 +143,9 @@ class DataCollector:
         session_data = session.model_dump()
         
         # MODO HÍBRIDO: Local = JSON, Render = PostgreSQL
-        if IS_PRODUCTION and save_session_to_db:
-            # Produção: Salva no PostgreSQL (permanente)
-            try:
-                save_session_to_db(session_id, session_data)
-                print(f"✅ Sessão {session_id} salva no PostgreSQL")
-            except Exception as e:
-                print(f"❌ Erro ao salvar no PostgreSQL: {e}")
-                # Fallback: salva em JSON mesmo em produção
-                filename = f"{session_id}.json"
-                filepath = self.data_dir / filename
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(session_data, f, indent=2, default=str)
-                return filepath, session_data
-            
-            # Retorna None pois não há arquivo local
+        if IS_PRODUCTION:
+            # Produção: NÃO salva ainda - main.py vai salvar depois com predição
+            # Isso evita problema de ON CONFLICT e cache
             return None, session_data
         else:
             # Local: Salva em arquivo JSON (como sempre)

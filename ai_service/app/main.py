@@ -9,6 +9,8 @@ import torch
 import json
 import zipfile
 from io import BytesIO
+import importlib
+import sys
 
 from app.schemas.telemetry import (
     TelemetryPoint, 
@@ -21,11 +23,22 @@ from app.services.prediction_service import get_prediction_service
 
 # Database (PostgreSQL no Render)
 try:
-    from app.database import IS_PRODUCTION, init_database, get_all_sessions, get_sessions_by_user
-except ImportError:
+    from app import database
+    # FORCE RELOAD: Invalida cache de bytecode
+    if 'app.database' in sys.modules:
+        print("[MAIN INIT] Forçando reload do módulo database para invalidar cache...")
+        database = importlib.reload(database)
+    
+    IS_PRODUCTION = database.IS_PRODUCTION
+    init_database = database.init_database
+    get_all_sessions = database.get_all_sessions
+    get_sessions_by_user = database.get_sessions_by_user
+except ImportError as e:
+    print(f"[MAIN INIT] Erro ao importar database: {e}")
     IS_PRODUCTION = False
     init_database = lambda: None
     get_all_sessions = lambda: []
+    get_sessions_by_user = lambda user_id: []
 
 app = FastAPI(
     title="Justina AI Service",
@@ -198,12 +211,46 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                 # Adiciona predição aos dados da sessão
                 session_data['ai_prediction'] = prediction
                 
-                # Atualiza no banco/arquivo com a predição
+                # Salva TUDO de uma vez no banco (agora com predição incluída)
                 if IS_PRODUCTION:
-                    from app.database import save_session_to_db
-                    save_session_to_db(session_id, session_data)
-                    print(f"✅ Predição salva no PostgreSQL")
+                    # Import direto da função (sem cache)
+                    from app.database import get_db_connection
+                    import json as json_lib
+                    
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("""
+                            INSERT INTO sessions (session_id, user_id, procedure_type, start_time, session_data)
+                            VALUES (%s, %s, %s, %s, %s)
+                            ON CONFLICT (session_id) 
+                            DO UPDATE SET 
+                                user_id = EXCLUDED.user_id,
+                                procedure_type = EXCLUDED.procedure_type,
+                                start_time = EXCLUDED.start_time,
+                                session_data = EXCLUDED.session_data,
+                                end_time = CURRENT_TIMESTAMP
+                        """, (
+                            session_id,
+                            session_data.get('user_id'),
+                            session_data.get('procedure_type'),
+                            session_data.get('start_time'),
+                            json_lib.dumps(session_data, default=str)
+                        ))
+                        conn.commit()
+                        print(f"✅ Sessão {session_id} salva no PostgreSQL (inline SQL)")
+                    except Exception as db_error:
+                        conn.rollback()
+                        print(f"❌ Erro SQL: {db_error}")
+                        import traceback
+                        traceback.print_exc()
+                    finally:
+                        cursor.close()
+                        conn.close()
+                
                 elif filepath:
+                    # Modo local: salva com predição em arquivo
                     with open(filepath, 'w', encoding='utf-8') as f:
                         json.dump(session_data, f, indent=2, default=str)
                     print(f"✅ Predição salva em {filepath}")
@@ -343,9 +390,18 @@ async def get_user_sessions(user_id: str):
             # Calcula score seguro
             score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
             
+            # Converte datetime para string
+            created_at = session.get("created_at")
+            date_str = "N/A"
+            if created_at:
+                if isinstance(created_at, str):
+                    date_str = created_at[:10]
+                else:  # datetime object
+                    date_str = created_at.strftime("%Y-%m-%d")
+            
             results.append({
                 "session_id": session.get("session_id"),
-                "date": (session.get("created_at", "")[:10] if session.get("created_at") else "N/A"),
+                "date": date_str,
                 "procedure_type": session.get("procedure_type", "unknown"),
                 "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
                 "score": f"{int(score_value)}%",
@@ -369,6 +425,94 @@ async def get_user_sessions(user_id: str):
     
     return {
         "user_id": user_id,
+        "total_sessions": len(results),
+        "sessions": results
+    }
+
+
+@app.get("/sessions/all")
+async def get_all_sessions():
+    """
+    Busca TODAS as sessões de TODOS os usuários
+    
+    Útil para:
+    - Dashboard administrativo
+    - Leaderboards globais
+    - Estatísticas gerais
+    - Listagem completa
+    """
+    # PostgreSQL em produção
+    if IS_PRODUCTION:
+        from app.database import get_sessions_all
+        sessions = get_sessions_all()
+    else:
+        # Local: retorna vazio (dados estão em arquivos JSON)
+        sessions = []
+    
+    # Processa cada sessão (mesma lógica do endpoint por usuário)
+    results = []
+    for session in sessions:
+        try:
+            session_data = session.get("session_data", {})
+            
+            # Extrai métricas básicas
+            economy = session_data.get("economy_of_motion") or 0
+            smoothness = session_data.get("smoothness_score") or 0
+            avg_velocity = session_data.get("avg_velocity") or 0
+            duration = session_data.get("duration")
+            tremor_detected = session_data.get("tremor_detected", False)
+            num_points = session_data.get("num_points", 0)
+            
+            # Pega predição LSTM salva
+            ai_prediction = session_data.get("ai_prediction")
+            
+            if ai_prediction and ai_prediction.get("smoothness_score") is not None:
+                smoothness = ai_prediction["smoothness_score"]
+            
+            # Determina status
+            status = "Good Performance"
+            if smoothness > 0.02:
+                status = "Needs Improvement"
+            elif economy > 1000:
+                status = "Check Efficiency"
+            
+            score_value = max(0, min(100, (1 - smoothness * 10) * 100)) if smoothness else 50
+            
+            # Converte datetime para string
+            created_at = session.get("created_at")
+            date_str = "N/A"
+            if created_at:
+                if isinstance(created_at, str):
+                    date_str = created_at[:10]
+                else:
+                    date_str = created_at.strftime("%Y-%m-%d")
+            
+            results.append({
+                "session_id": session.get("session_id"),
+                "user_id": session.get("user_id"),  # IMPORTANTE: inclui user_id
+                "date": date_str,
+                "procedure_type": session.get("procedure_type", "unknown"),
+                "mode": "3D Surgery" if "3d" in str(session.get("procedure_type", "")).lower() else "2D Simulator",
+                "score": f"{int(score_value)}%",
+                "status": status,
+                "duration": round(duration, 1) if duration else None,
+                "num_points": num_points,
+                "tremor_detected": tremor_detected,
+                "metrics": {
+                    "economy_of_motion": round(economy, 2),
+                    "smoothness_score": round(smoothness, 4),
+                    "avg_velocity": round(avg_velocity, 2),
+                    "duration": round(duration, 1) if duration else None,
+                    "tremor_detected": tremor_detected,
+                    "num_points": num_points
+                },
+                "ai_prediction": ai_prediction
+            })
+        except Exception as e:
+            print(f"Erro ao processar sessão: {e}")
+            continue
+    
+    return {
         "total_sessions": len(results),
         "sessions": results
     }

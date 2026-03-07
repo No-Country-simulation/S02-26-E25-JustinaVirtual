@@ -12,7 +12,14 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
+# Prevenir cache de bytecode Python (força reload de módulos)
 ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Limpar qualquer arquivo .pyc existente
+RUN find . -type f -name '*.pyc' -delete && \
+    find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
 EXPOSE 8000
 
