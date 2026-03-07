@@ -1,10 +1,16 @@
 package br.com.justina.domain.model.training;
 
+import br.com.justina.domain.model.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode; 
+import org.hibernate.type.SqlTypes;           
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -13,7 +19,9 @@ import java.util.UUID;
     @Index(name = "idx_questions_type", columnList = "type"),
     @Index(name = "idx_questions_media", columnList = "mediaUrl")
 })
-public class Question {
+@EqualsAndHashCode(callSuper = false)
+public class Question extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -25,9 +33,10 @@ public class Question {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
-    // JSONB mapeado como String para flexibilidade
+    
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
-    private String options; 
+    private List<String> options; 
 
     @Column(name = "correct_index", nullable = false)
     private Integer correctIndex;
@@ -42,7 +51,5 @@ public class Question {
     @UpdateTimestamp
     private LocalDateTime modifiedAt;
 
-    private Boolean active = true;
-    private String status = "enabled";
     private Integer version = 1;
 }
