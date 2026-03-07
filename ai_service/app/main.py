@@ -213,13 +213,6 @@ async def complete_session(session_id: str, request: SessionCompleteRequest):
                 
                 # Salva TUDO de uma vez no banco (agora com predição incluída)
                 if IS_PRODUCTION:
-                    print(f"\n[MAIN.PY] Salvando sessão completa com predição:")
-                    print(f"[MAIN.PY] session_id: {session_id}")
-                    print(f"[MAIN.PY] user_id: {session_data.get('user_id')}")
-                    print(f"[MAIN.PY] procedure_type: {session_data.get('procedure_type')}")
-                    print(f"[MAIN.PY] duration: {session_data.get('duration')}")
-                    print(f"[MAIN.PY] quality: {prediction.get('quality_level')}")
-                    
                     # Import direto da função (sem cache)
                     from app.database import get_db_connection
                     import json as json_lib
@@ -321,12 +314,9 @@ async def get_user_sessions(user_id: str):
     
     Retorna análise completa incluindo predição da IA quando disponível
     """
-    print(f"\n[ENDPOINT] GET /sessions/user/{user_id}")
-    
     if IS_PRODUCTION:
         # Busca do PostgreSQL
         sessions = get_sessions_by_user(user_id)
-        print(f"[POSTGRES] Encontradas {len(sessions)} sessões para {user_id}")
     else:
         # Busca dos arquivos JSON locais
         import glob
@@ -352,20 +342,11 @@ async def get_user_sessions(user_id: str):
         # Ordena por data (mais recente primeiro)
         sessions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     
-    print(f"[PROCESSAMENTO] Iniciando processamento de {len(sessions)} sessões")
-    
     # Processa cada sessão e adiciona análise da IA
     results = []
     for session in sessions:
         try:
             session_data = session.get("session_data", {})
-            
-            # DEBUG: Ver o que está vindo do PostgreSQL
-            session_id = session.get("session_id")
-            print(f"\n[DEBUG] Processando sessão: {session_id}")
-            print(f"[DEBUG] Keys em session_data: {list(session_data.keys())}")
-            print(f"[DEBUG] duration: {session_data.get('duration')}")
-            print(f"[DEBUG] ai_prediction: {session_data.get('ai_prediction')}")
             
             # Extrai métricas básicas do session_data
             economy = session_data.get("economy_of_motion") or 0
@@ -460,8 +441,6 @@ async def get_all_sessions():
     - Estatísticas gerais
     - Listagem completa
     """
-    print(f"[ENDPOINT] GET /sessions/all")
-    
     # PostgreSQL em produção
     if IS_PRODUCTION:
         from app.database import get_sessions_all
@@ -469,9 +448,6 @@ async def get_all_sessions():
     else:
         # Local: retorna vazio (dados estão em arquivos JSON)
         sessions = []
-    
-    print(f"[POSTGRES] Encontradas {len(sessions)} sessões no total")
-    print(f"[PROCESSAMENTO] Iniciando processamento de {len(sessions)} sessões")
     
     # Processa cada sessão (mesma lógica do endpoint por usuário)
     results = []

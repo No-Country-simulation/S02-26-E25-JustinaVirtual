@@ -11,15 +11,10 @@ from datetime import datetime
 
 # Cache buster - Force module reload
 _CACHE_VERSION = "v2.1_20260306_014700"
-print(f"[DATABASE MODULE] Loading version {_CACHE_VERSION}")
 
 # Detecta se está rodando no Render
 IS_PRODUCTION = os.getenv("RENDER") is not None
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-print(f"[ENV CHECK] RENDER={os.getenv('RENDER')}")
-print(f"[ENV CHECK] IS_PRODUCTION={IS_PRODUCTION}")
-print(f"[ENV CHECK] DATABASE_URL={'SET' if DATABASE_URL else 'NOT SET'}")
 
 # Função de conexão - disponível globalmente
 def get_db_connection():
@@ -167,8 +162,6 @@ if IS_PRODUCTION and DATABASE_URL:
     
     def get_sessions_all() -> List[Dict]:
         """Busca TODAS as sessões (todos os usuários)"""
-        print(f"[GET DB] Buscando TODAS as sessões")
-        
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -179,8 +172,6 @@ if IS_PRODUCTION and DATABASE_URL:
         """)
         
         sessions = cursor.fetchall()
-        
-        print(f"[GET DB] Query retornou {len(sessions)} sessões no total")
         
         cursor.close()
         conn.close()

@@ -24,8 +24,7 @@ try:
     
     IS_PRODUCTION = database_module.IS_PRODUCTION
     save_session_to_db = database_module.save_session_to_db
-except ImportError as e:
-    print(f"[DATA COLLECTOR] Erro ao importar database: {e}")
+except ImportError:
     IS_PRODUCTION = False
     save_session_to_db = None
 
@@ -147,7 +146,6 @@ class DataCollector:
         if IS_PRODUCTION:
             # Produção: NÃO salva ainda - main.py vai salvar depois com predição
             # Isso evita problema de ON CONFLICT e cache
-            print(f"[DATA COLLECTOR] Sessão {session_id} preparada (aguardando predição para salvar)")
             return None, session_data
         else:
             # Local: Salva em arquivo JSON (como sempre)
